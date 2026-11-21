@@ -2,13 +2,14 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Cờ Vây 9x9 - Chuẩn Thi Đấu</title>
+    <title>Cờ Vây 9x9 - Đồng Hồ 5 Phút Chuẩn Cờ Vua</title>
     <style>
         body {
             background-color: #18181f;
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
+            background-attachment: fixed;
             color: #fff;
             font-family: Arial, sans-serif;
             display: flex;
@@ -17,7 +18,6 @@
             margin: 10px;
             user-select: none;
             min-height: 96vh;
-            transition: background 0.3s ease;
         }
         .hud {
             display: flex;
@@ -25,93 +25,103 @@
             gap: 10px;
             align-items: center;
             justify-content: center;
-            background: rgba(35, 35, 45, 0.92);
+            background: rgba(35, 35, 45, 0.94);
             padding: 8px 16px;
             border-radius: 10px;
             margin-bottom: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.55);
             backdrop-filter: blur(4px);
         }
-        .stat-box { background: #14141b; padding: 6px 12px; border-radius: 6px; font-size: 13.5px; border: 1px solid #333; }
-        .clock-box { font-family: monospace; font-size: 14px; font-weight: bold; padding: 6px 12px; border-radius: 6px; background: #111; border: 1px solid #444; }
-        .clock-active { border-color: #f5b041; box-shadow: 0 0 8px rgba(245, 176, 65, 0.4); }
-        .clock-byo { color: #ff6b6b; border-color: #e74c3c; }
+        .stat-box { background: #14141b; padding: 6px 12px; border-radius: 6px; font-size: 13.5px; border: 1px solid #2e2e3a; }
+        .clock-box {
+            background: #111118;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 14px;
+            border: 1px solid #444;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        .clock-active { border-color: #f5b041; box-shadow: 0 0 10px rgba(245, 176, 65, 0.4); }
+        .clock-danger {
+            background: #5a1212 !important;
+            border-color: #ff4d4d !important;
+            color: #ffcccc !important;
+            animation: pulse 0.8s infinite alternate;
+        }
+        @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.04); } }
         canvas {
-            box-shadow: 0 12px 32px rgba(0,0,0,0.85);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.85);
             cursor: pointer;
             max-width: 92vw;
-            max-height: 76vh;
+            max-height: 78vh;
             border-radius: 8px;
         }
-        button { padding: 7px 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 13px; }
+        button { padding: 7px 13px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         button:hover { opacity: 0.88; }
         .btn-pass { background: #f39c12; color: #000; }
         .btn-resign { background: #e74c3c; color: #fff; }
-        .btn-sound { background: #27ae60; color: #fff; }
+        .btn-sound { background: #2ecc71; color: #000; }
+        .btn-sound.muted { background: #7f8c8d; color: #fff; }
 
-        /* Nút Setting góc dưới bên phải đúng vị trí khung đỏ */
-        .btn-setting-corner {
+        /* Nút Setting góc dưới bên phải */
+        .btn-setting {
             position: fixed;
-            bottom: 18px;
-            right: 22px;
+            bottom: 16px;
+            right: 16px;
             background: rgba(35, 35, 45, 0.95);
             color: #f5b041;
             border: 2px solid #f5b041;
             padding: 10px 18px;
-            border-radius: 10px;
+            border-radius: 8px;
             font-size: 15px;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.7);
-            z-index: 900;
-            display: flex;
-            align-items: center;
-            gap: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.6);
+            z-index: 800;
         }
-        .btn-setting-corner:hover { background: #f5b041; color: #18181f; }
+        .btn-setting:hover { background: #f5b041; color: #18181f; }
 
-        /* Popup tab bé chứa iframe index2.html */
+        /* Cửa sổ tab bé nhúng index2.html */
         .setting-modal {
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.65);
+            background: rgba(0,0,0,0.75);
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 1500;
+            z-index: 950;
         }
         .setting-window {
+            position: relative;
             width: 440px;
             max-width: 94vw;
-            height: 540px;
+            height: 460px;
             max-height: 88vh;
-            background: #23232e;
+            background: #22222c;
             border: 2px solid #f5b041;
             border-radius: 12px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.9);
             overflow: hidden;
-            box-shadow: 0 12px 40px rgba(0,0,0,0.85);
-            display: flex;
-            flex-direction: column;
         }
-        .setting-header {
-            background: #181820;
-            padding: 10px 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #383846;
-            font-weight: bold;
-            color: #f5b041;
-        }
-        .setting-window iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            background: #23232e;
+        .setting-window iframe { width: 100%; height: 100%; border: none; }
+        .close-setting {
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            background: #e74c3c;
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-size: 13px;
+            z-index: 10;
         }
 
         .overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.88);
+            position: fixed; inset: 0; background: rgba(0,0,0,0.9);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 2000; text-align: center;
+            z-index: 1000; text-align: center;
         }
         .hidden { display: none !important; }
     </style>
@@ -120,35 +130,32 @@
 
     <div class="hud">
         <div class="stat-box" id="playerLabel">Chế độ: Chơi thử 2 người</div>
-        <div class="clock-box" id="blackClock">⚫ Đen: 10:00 (3x30s)</div>
-        <div class="clock-box" id="whiteClock">⚪ Trắng: 10:00 (3x30s)</div>
+        <div class="clock-box clock-active" id="blackClockBox">⚫ Đen: <span id="blackClock">05:00</span></div>
+        <div class="clock-box" id="whiteClockBox">⚪ Trắng: <span id="whiteClock">05:00</span></div>
         <div class="stat-box" id="turnLabel" style="color: #f5b041; font-weight: bold;">Lượt: Quân Đen</div>
-        <div class="stat-box">Nước: <strong id="moveCounter">0</strong>/60 | Tù binh — Đen: <strong id="blackCap">0</strong> | Trắng: <strong id="whiteCap">0</strong></div>
-        <button class="btn-sound" id="soundBtn" onclick="toggleSound()">🔊 Âm thanh</button>
+        <div class="stat-box">Tù binh — Đen: <strong id="blackCap">0</strong> | Trắng: <strong id="whiteCap">0</strong></div>
+        <button class="btn-sound" id="soundBtn" onclick="toggleSound()">🔊 Âm thanh: Bật</button>
         <button class="btn-pass" onclick="handlePass()">Bỏ Lượt (Pass)</button>
         <button class="btn-resign" onclick="handleResign()">Đầu Hàng</button>
     </div>
 
     <canvas id="goCanvas" width="1000" height="1000"></canvas>
 
-    <!-- NÚT SETTING Ở GÓC DƯỚI PHẢI -->
-    <button class="btn-setting-corner" onclick="openSettings()">⚙️ Setting</button>
+    <!-- NÚT MỞ SETTING (index2.html) -->
+    <button class="btn-setting" onclick="openSettings()">⚙️ Setting</button>
 
-    <!-- CỬA SỔ TAB BÉ QUẢN LÝ (INDEX2.HTML) -->
+    <!-- CỬA SỔ TAB BÉ SETTING -->
     <div class="setting-modal hidden" id="settingModal" onclick="if(event.target===this) closeSettings()">
         <div class="setting-window">
-            <div class="setting-header">
-                <span>⚙️ Quản Lý & Cài Đặt Game</span>
-                <button onclick="closeSettings()" style="background:#e74c3c; color:#fff; padding:4px 10px;">✕ Đóng</button>
-            </div>
-            <iframe id="settingFrame" src="/index2.html"></iframe>
+            <button class="close-setting" onclick="closeSettings()">✕ Đóng</button>
+            <iframe id="settingFrame" src=""></iframe>
         </div>
     </div>
 
     <!-- MÀN HÌNH KẾT THÚC -->
     <div class="overlay hidden" id="endOverlay">
-        <h1 id="endTitle" style="font-size: 44px; margin-bottom: 8px;"></h1>
-        <p id="endReason" style="font-size: 18px; color: #ccc; margin-bottom: 24px;"></p>
+        <h1 id="endTitle" style="font-size: 46px; margin-bottom: 8px;"></h1>
+        <p id="endReason" style="font-size: 19px; color: #ccc; margin-bottom: 24px;"></p>
         <button onclick="exitMatch()" style="padding: 12px 26px; font-size: 16px; background: #2ecc71; color: #000;">Quay về sảnh</button>
     </div>
 
@@ -159,6 +166,117 @@
         const GRID_SIZE = 9;
         const MARGIN = 115;
 
+        // --- QUẢN LÝ CẤU HÌNH TỪ SETTING (index2.html) ---
+        let settings = {
+            sfxVol: Number(localStorage.getItem('go_sfxVol') ?? 0.8),
+            bgmVol: Number(localStorage.getItem('go_bgmVol') ?? 0.4),
+            bgmData: localStorage.getItem('go_bgmData') || '',
+            bgImgData: localStorage.getItem('go_bgImgData') || ''
+        };
+
+        const bgmAudio = new Audio();
+        bgmAudio.loop = true;
+
+        function applySettings() {
+            settings.sfxVol = Number(localStorage.getItem('go_sfxVol') ?? 0.8);
+            settings.bgmVol = Number(localStorage.getItem('go_bgmVol') ?? 0.4);
+            settings.bgmData = localStorage.getItem('go_bgmData') || '';
+            settings.bgImgData = localStorage.getItem('go_bgImgData') || '';
+
+            if (settings.bgImgData) {
+                document.body.style.backgroundImage = `url('${settings.bgImgData}')`;
+            } else {
+                document.body.style.backgroundImage = 'none';
+                document.body.style.backgroundColor = '#18181f';
+            }
+
+            bgmAudio.volume = soundEnabled ? settings.bgmVol : 0;
+            if (settings.bgmData && bgmAudio.src !== settings.bgmData) {
+                bgmAudio.src = settings.bgmData;
+                if (soundEnabled) bgmAudio.play().catch(() => {});
+            } else if (!settings.bgmData) {
+                bgmAudio.pause();
+            }
+        }
+
+        window.addEventListener('message', (e) => {
+            if (e.data === 'settingsUpdated') applySettings();
+        });
+
+        function openSettings() {
+            document.getElementById('settingFrame').src = '/index2.html';
+            document.getElementById('settingModal').classList.remove('hidden');
+        }
+
+        function closeSettings() {
+            document.getElementById('settingModal').classList.add('hidden');
+            applySettings();
+        }
+
+        // --- HỆ THỐNG ÂM THANH ĐẶT QUÂN ---
+        let soundEnabled = true;
+        let audioCtx = null;
+        const moveAudio = new Audio('/sound.mp3');
+        moveAudio.preload = 'auto';
+
+        function unlockAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) audioCtx = new AudioContext();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+            if (settings.bgmData && bgmAudio.paused && soundEnabled) {
+                bgmAudio.play().catch(() => {});
+            }
+        }
+        document.addEventListener('pointerdown', unlockAudio);
+
+        function playSynthStoneClick() {
+            try {
+                unlockAudio();
+                if (!audioCtx) return;
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(920, now);
+                osc.frequency.exponentialRampToValueAtTime(140, now + 0.065);
+                gain.gain.setValueAtTime(0.65 * settings.sfxVol, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.075);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.08);
+            } catch (e) {}
+        }
+
+        function playStoneSound() {
+            if (!soundEnabled || settings.sfxVol <= 0) return;
+            try {
+                moveAudio.volume = settings.sfxVol;
+                moveAudio.currentTime = 0;
+                const p = moveAudio.play();
+                if (p !== undefined) p.catch(() => playSynthStoneClick());
+            } catch (e) {
+                playSynthStoneClick();
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const btn = document.getElementById('soundBtn');
+            btn.innerText = soundEnabled ? '🔊 Âm thanh: Bật' : '🔇 Âm thanh: Tắt';
+            btn.classList.toggle('muted', !soundEnabled);
+            bgmAudio.volume = soundEnabled ? settings.bgmVol : 0;
+            if (soundEnabled) {
+                playStoneSound();
+                if (settings.bgmData) bgmAudio.play().catch(() => {});
+            } else {
+                bgmAudio.pause();
+            }
+        }
+
+        // --- THÔNG TIN TRẬN ĐẤU & ĐỒNG HỒ 5 PHÚT (300 GIÂY) CHUẨN CỜ VUA ---
         const username = sessionStorage.getItem('go_username');
         const roomId = sessionStorage.getItem('go_roomId');
         const myColor = Number(sessionStorage.getItem('go_color') || 0);
@@ -170,294 +288,122 @@
             document.getElementById('playerLabel').innerText = `Bạn: ${username} (${myColor === 1 ? 'Đen' : 'Trắng'}) vs ${opponent}`;
         }
 
-        // --- CẤU HÌNH TỪ INDEX2 (LƯU TRONG LOCALSTORAGE) ---
-        let settings = {
-            sfxVol: Number(localStorage.getItem('go_sfx_vol') ?? 0.8),
-            bgmVol: Number(localStorage.getItem('go_bgm_vol') ?? 0.4),
-            mainMinutes: Number(localStorage.getItem('go_main_min') ?? 10), // 10 - 15 phút
-            byoPeriods: Number(localStorage.getItem('go_byo_periods') ?? 3), // 3 lần
-            byoSeconds: Number(localStorage.getItem('go_byo_sec') ?? 30),   // 30 giây
-            maxMoves: Number(localStorage.getItem('go_max_moves') ?? 60),    // 40 - 60 nước
-            bgDataUrl: localStorage.getItem('go_bg_image') || ''
-        };
-
-        // --- HỆ THỐNG ÂM THANH & NHẠC NỀN ---
-        let soundEnabled = true;
-        const moveSound = new Audio('/sound.mp3');
-        const bgmAudio = new Audio();
-        bgmAudio.loop = true;
-        let audioCtx = null;
-
-        function applySettings() {
-            settings.sfxVol = Number(localStorage.getItem('go_sfx_vol') ?? 0.8);
-            settings.bgmVol = Number(localStorage.getItem('go_bgm_vol') ?? 0.4);
-            settings.mainMinutes = Number(localStorage.getItem('go_main_min') ?? 10);
-            settings.byoPeriods = Number(localStorage.getItem('go_byo_periods') ?? 3);
-            settings.byoSeconds = Number(localStorage.getItem('go_byo_sec') ?? 30);
-            settings.maxMoves = Number(localStorage.getItem('go_max_moves') ?? 60);
-            settings.bgDataUrl = localStorage.getItem('go_bg_image') || '';
-
-            moveSound.volume = soundEnabled ? settings.sfxVol : 0;
-            bgmAudio.volume = soundEnabled ? settings.bgmVol : 0;
-
-            if (settings.bgDataUrl) {
-                document.body.style.backgroundImage = `url('${settings.bgDataUrl}')`;
-            } else {
-                document.body.style.backgroundImage = 'none';
-                document.body.style.backgroundColor = '#18181f';
-            }
-            updateUI();
-        }
-
-        // Nhận thông báo trực tiếp từ tab bé index2.html khi người chơi điều chỉnh
-        window.addEventListener('message', (e) => {
-            if (!e.data) return;
-            if (e.data.type === 'SETTINGS_UPDATED') {
-                applySettings();
-                // Nếu ván chưa đánh nước nào thì cập nhật luôn đồng hồ theo cài đặt mới
-                if (moveCount === 0) {
-                    timers[1] = { main: settings.mainMinutes * 60, periods: settings.byoPeriods, byo: settings.byoSeconds };
-                    timers[2] = { main: settings.mainMinutes * 60, periods: settings.byoPeriods, byo: settings.byoSeconds };
-                    updateClockDisplay();
-                }
-            } else if (e.data.type === 'BGM_SELECTED' && e.data.url) {
-                bgmAudio.src = e.data.url;
-                bgmAudio.volume = soundEnabled ? settings.bgmVol : 0;
-                if (soundEnabled) bgmAudio.play().catch(() => {});
-            }
-        });
-
-        function openSettings() {
-            document.getElementById('settingModal').classList.remove('hidden');
-        }
-        function closeSettings() {
-            document.getElementById('settingModal').classList.add('hidden');
-        }
-
-        function unlockAudio() {
-            if (!audioCtx) {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                if (AudioContext) audioCtx = new AudioContext();
-            }
-            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-            if (bgmAudio.src && bgmAudio.paused && soundEnabled) {
-                bgmAudio.play().catch(() => {});
-            }
-        }
-        document.addEventListener('pointerdown', unlockAudio, { once: true });
-
-        function playSynthStoneClick() {
-            if (settings.sfxVol <= 0) return;
-            try {
-                if (!audioCtx) {
-                    const AudioContext = window.AudioContext || window.webkitAudioContext;
-                    audioCtx = new AudioContext();
-                }
-                const now = audioCtx.currentTime;
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(750, now);
-                osc.frequency.exponentialRampToValueAtTime(140, now + 0.055);
-                gain.gain.setValueAtTime(0.45 * settings.sfxVol, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start(now);
-                osc.stop(now + 0.065);
-            } catch (e) {}
-        }
-
-        function playMoveSound() {
-            if (!soundEnabled || settings.sfxVol <= 0) return;
-            unlockAudio();
-            moveSound.volume = settings.sfxVol;
-            moveSound.currentTime = 0;
-            const p = moveSound.play();
-            if (p !== undefined) {
-                p.catch(() => playSynthStoneClick());
-            }
-        }
-
-        function toggleSound() {
-            soundEnabled = !soundEnabled;
-            const btn = document.getElementById('soundBtn');
-            btn.innerText = soundEnabled ? '🔊 Âm thanh' : '🔇 Đã tắt';
-            btn.style.background = soundEnabled ? '#27ae60' : '#7f8c8d';
-            bgmAudio.volume = soundEnabled ? settings.bgmVol : 0;
-            if (soundEnabled) {
-                playMoveSound();
-                if (bgmAudio.src) bgmAudio.play().catch(() => {});
-            } else {
-                bgmAudio.pause();
-            }
-        }
-
-        // --- HỆ THỐNG ĐỒNG HỒ THI ĐẤU 9x9 (10-15 PHÚT + 3x30s BYO-YOMI) ---
-        let timers = {
-            1: { main: settings.mainMinutes * 60, periods: settings.byoPeriods, byo: settings.byoSeconds },
-            2: { main: settings.mainMinutes * 60, periods: settings.byoPeriods, byo: settings.byoSeconds }
-        };
-        let gameEnded = false;
-
-        function formatClock(t) {
-            if (t.main > 0) {
-                const m = Math.floor(t.main / 60).toString().padStart(2, '0');
-                const s = (t.main % 60).toString().padStart(2, '0');
-                return `${m}:${s} (${t.periods}x${settings.byoSeconds}s)`;
-            } else {
-                return `Byo-yomi: ${t.byo}s (${t.periods} lần)`;
-            }
-        }
-
-        function updateClockDisplay() {
-            const bEl = document.getElementById('blackClock');
-            const wEl = document.getElementById('whiteClock');
-            bEl.innerText = `⚫ Đen: ${formatClock(timers[1])}`;
-            wEl.innerText = `⚪ Trắng: ${formatClock(timers[2])}`;
-
-            bEl.className = 'clock-box' + (currentTurn === 1 ? ' clock-active' : '') + (timers[1].main === 0 ? ' clock-byo' : '');
-            wEl.className = 'clock-box' + (currentTurn === 2 ? ' clock-active' : '') + (timers[2].main === 0 ? ' clock-byo' : '');
-        }
-
-        setInterval(() => {
-            if (gameEnded) return;
-            const t = timers[currentTurn];
-            if (t.main > 0) {
-                t.main--;
-            } else {
-                t.byo--;
-                if (t.byo <= 0) {
-                    t.periods--;
-                    if (t.periods <= 0) {
-                        gameEnded = true;
-                        const winnerName = currentTurn === 1 ? 'QUÂN TRẮNG THẮNG!' : 'QUÂN ĐEN THẮNG!';
-                        const reason = `${currentTurn === 1 ? 'Quân Đen' : 'Quân Trắng'} đã hết thời gian và 3 lần đếm ngược 30s!`;
-                        if (isOnline && currentTurn === myColor) {
-                            socket.emit('resignGame', { roomId, username });
-                        } else if (!isOnline) {
-                            showEndScreen(winnerName, reason, true);
-                        }
-                        return;
-                    } else {
-                        t.byo = settings.byoSeconds;
-                    }
-                }
-            }
-            updateClockDisplay();
-        }, 1000);
-
-        // --- DỮ LIỆU BÀN CỜ 9x9 ---
         let board = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(0));
         let prevBoard = null;
         let currentTurn = 1;
         let captures = { 1: 0, 2: 0 };
         let lastMove = null;
         let passCount = 0;
-        let moveCount = 0;
         let hoverPoint = null;
+        let gameEnded = false;
 
-        const woodImg = new Image();
-        woodImg.src = '/wood.png';
-        let woodLoaded = false;
-        woodImg.onload = () => { woodLoaded = true; drawBoard(); };
+        // Tổng thời gian mỗi người: 5 phút = 300 giây (không cộng thêm khi đánh, hết 5 phút là thua hết giờ)
+        let clocks = {
+            1: { timeLeft: 300 },
+            2: { timeLeft: 300 }
+        };
 
-        const step = (canvas.width - MARGIN * 2) / (GRID_SIZE - 1);
-        const stoneRadius = step * 0.44;
-        const COLS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
-        const HOSHI = [[2, 2], [6, 2], [4, 4], [2, 6], [6, 6]];
-
-        function drawBoard() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            if (woodLoaded) {
-                ctx.drawImage(woodImg, 0, 0, canvas.width, canvas.height);
-            } else {
-                ctx.fillStyle = '#d7a86e';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-            }
-
-            const start = MARGIN;
-            const end = canvas.width - MARGIN;
-
-            ctx.strokeStyle = '#1b130c';
-            ctx.lineWidth = 4.5;
-            ctx.strokeRect(start - 10, start - 10, (end - start) + 20, (end - start) + 20);
-
-            ctx.lineWidth = 2.4;
-            for (let i = 0; i < GRID_SIZE; i++) {
-                const pos = start + i * step;
-                ctx.beginPath(); ctx.moveTo(pos, start); ctx.lineTo(pos, end); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(start, pos); ctx.lineTo(end, pos); ctx.stroke();
-            }
-
-            ctx.fillStyle = '#1b130c';
-            for (const [hc, hr] of HOSHI) {
-                ctx.beginPath();
-                ctx.arc(start + hc * step, start + hr * step, 7.5, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-            ctx.font = 'bold 26px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            for (let i = 0; i < GRID_SIZE; i++) {
-                const pos = start + i * step;
-                ctx.fillText(COLS[i], pos, start - 54);
-                ctx.fillText(COLS[i], pos, end + 54);
-                const rowLabel = String(GRID_SIZE - i);
-                ctx.fillText(rowLabel, start - 54, pos);
-                ctx.fillText(rowLabel, end + 54, pos);
-            }
-
-            if (hoverPoint && !gameEnded && board[hoverPoint.col][hoverPoint.row] === 0) {
-                drawStone(start + hoverPoint.col * step, start + hoverPoint.row * step, currentTurn, true);
-            }
-
-            for (let c = 0; c < GRID_SIZE; c++) {
-                for (let r = 0; r < GRID_SIZE; r++) {
-                    const stone = board[c][r];
-                    if (stone !== 0) {
-                        const cx = start + c * step;
-                        const cy = start + r * step;
-                        drawStone(cx, cy, stone, false);
-                        if (lastMove && lastMove.col === c && lastMove.row === r) {
-                            ctx.beginPath();
-                            ctx.arc(cx, cy, stoneRadius * 0.24, 0, Math.PI * 2);
-                            ctx.fillStyle = '#e74c3c';
-                            ctx.fill();
-                        }
-                    }
-                }
-            }
+        function formatClock(sec) {
+            const s = Math.max(0, Math.ceil(sec));
+            const m = Math.floor(s / 60);
+            const r = s % 60;
+            return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
         }
 
-        function drawStone(x, y, color, isGhost) {
+        function renderClocks() {
+            [1, 2].forEach(c => {
+                const textEl = document.getElementById(c === 1 ? 'blackClock' : 'whiteClock');
+                const boxEl = document.getElementById(c === 1 ? 'blackClockBox' : 'whiteClockBox');
+                const t = clocks[c].timeLeft;
+
+                // Khi còn <= 30 giây cuối: hiện đếm ngược 30s đỏ cảnh báo sắp hết giờ
+                if (t <= 30 && t > 0) {
+                    textEl.innerText = `⏳ Đếm ngược: ${Math.ceil(t)}s`;
+                    boxEl.classList.add('clock-danger');
+                } else {
+                    textEl.innerText = formatClock(t);
+                    boxEl.classList.remove('clock-danger');
+                }
+
+                boxEl.classList.toggle('clock-active', currentTurn === c && !gameEnded);
+            });
+        }
+
+        setInterval(() => {
+            if (gameEnded) return;
+            const active = clocks[currentTurn];
+            active.timeLeft -= 1;
+
+            if (active.timeLeft <= 0) {
+                active.timeLeft = 0;
+                renderClocks();
+                gameEnded = true;
+                const loserColor = currentTurn;
+                const winnerColor = loserColor === 1 ? 2 : 1;
+
+                if (isOnline) {
+                    if (myColor === loserColor) {
+                        socket.emit('resignGame', { roomId, username });
+                    }
+                } else {
+                    showEndScreen(
+                        winnerColor === 1 ? 'QUÂN ĐEN THẮNG!' : 'QUÂN TRẮNG THẮNG!',
+                        `${loserColor === 1 ? 'Quân Đen' : 'Quân Trắng'} đã hết tổng 5 phút suy nghĩ!`,
+                        true
+                    );
+                }
+                return;
+            }
+            renderClocks();
+        }, 1000);
+
+        // --- VẼ BÀN CỜ GỖ 9x9 ---
+        const woodImg = new Image();
+        let woodLoaded = false;
+        woodImg.src = '/wood.png';
+        woodImg.onload = () => { woodLoaded = true; drawBoard(); };
+
+        const COL_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+        const STAR_POINTS = [
+            { col: 1, row: 2 }, { col: 7, row: 2 },
+            { col: 4, row: 4 },
+            { col: 1, row: 6 }, { col: 7, row: 6 }
+        ];
+
+        function getMetrics() {
+            const step = (canvas.width - MARGIN * 2) / (GRID_SIZE - 1);
+            const stoneRadius = step * 0.44;
+            return { step, stoneRadius };
+        }
+
+        function drawStone(x, y, radius, color, isGhost = false) {
             ctx.save();
             ctx.beginPath();
-            ctx.arc(x, y, stoneRadius, 0, Math.PI * 2);
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+
             if (isGhost) {
-                ctx.fillStyle = color === 1 ? 'rgba(20, 20, 20, 0.42)' : 'rgba(255, 255, 255, 0.55)';
+                ctx.fillStyle = color === 1 ? 'rgba(20, 20, 20, 0.42)' : 'rgba(245, 245, 245, 0.58)';
                 ctx.fill();
-                ctx.lineWidth = 2.5;
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
                 ctx.stroke();
             } else {
                 ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
-                ctx.shadowBlur = 10;
-                ctx.shadowOffsetX = 4;
-                ctx.shadowOffsetY = 6;
+                ctx.shadowBlur = radius * 0.25;
+                ctx.shadowOffsetX = radius * 0.1;
+                ctx.shadowOffsetY = radius * 0.14;
+
                 const grad = ctx.createRadialGradient(
-                    x - stoneRadius * 0.3, y - stoneRadius * 0.3, stoneRadius * 0.1,
-                    x, y, stoneRadius
+                    x - radius * 0.3, y - radius * 0.3, radius * 0.1,
+                    x, y, radius
                 );
                 if (color === 1) {
-                    grad.addColorStop(0, '#5a5a5a');
-                    grad.addColorStop(0.3, '#1d1d1d');
+                    grad.addColorStop(0, '#555555');
+                    grad.addColorStop(0.3, '#1e1e1e');
                     grad.addColorStop(1, '#050505');
                 } else {
                     grad.addColorStop(0, '#ffffff');
-                    grad.addColorStop(0.75, '#ebebeb');
+                    grad.addColorStop(0.75, '#eaeaea');
                     grad.addColorStop(1, '#bdbdbd');
                 }
                 ctx.fillStyle = grad;
@@ -466,18 +412,98 @@
             ctx.restore();
         }
 
-        function getNearestPoint(clientX, clientY) {
+        function drawBoard() {
+            const { step, stoneRadius } = getMetrics();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (woodLoaded) {
+                ctx.drawImage(woodImg, 0, 0, canvas.width, canvas.height);
+            } else {
+                ctx.fillStyle = '#d3a268';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            ctx.save();
+            ctx.strokeStyle = '#1b140d';
+            ctx.lineCap = 'square';
+
+            for (let i = 0; i < GRID_SIZE; i++) {
+                const pos = MARGIN + i * step;
+                ctx.lineWidth = (i === 0 || i === GRID_SIZE - 1) ? 4.5 : 2.5;
+
+                ctx.beginPath();
+                ctx.moveTo(pos, MARGIN);
+                ctx.lineTo(pos, MARGIN + (GRID_SIZE - 1) * step);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(MARGIN, pos);
+                ctx.lineTo(MARGIN + (GRID_SIZE - 1) * step, pos);
+                ctx.stroke();
+            }
+
+            ctx.fillStyle = '#1b140d';
+            STAR_POINTS.forEach(pt => {
+                ctx.beginPath();
+                ctx.arc(MARGIN + pt.col * step, MARGIN + pt.row * step, 7.5, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            ctx.font = 'bold 21px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            for (let i = 0; i < GRID_SIZE; i++) {
+                const pos = MARGIN + i * step;
+                ctx.fillText(COL_LABELS[i], pos, MARGIN - 62);
+                ctx.fillText(COL_LABELS[i], pos, MARGIN + (GRID_SIZE - 1) * step + 62);
+                const rowNum = String(GRID_SIZE - i);
+                ctx.fillText(rowNum, MARGIN - 62, pos);
+                ctx.fillText(rowNum, MARGIN + (GRID_SIZE - 1) * step + 62, pos);
+            }
+            ctx.restore();
+
+            if (hoverPoint && !gameEnded && board[hoverPoint.col][hoverPoint.row] === 0) {
+                drawStone(
+                    MARGIN + hoverPoint.col * step,
+                    MARGIN + hoverPoint.row * step,
+                    stoneRadius,
+                    currentTurn,
+                    true
+                );
+            }
+
+            for (let c = 0; c < GRID_SIZE; c++) {
+                for (let r = 0; r < GRID_SIZE; r++) {
+                    const stone = board[c][r];
+                    if (stone !== 0) {
+                        const cx = MARGIN + c * step;
+                        const cy = MARGIN + r * step;
+                        drawStone(cx, cy, stoneRadius, stone, false);
+
+                        if (lastMove && lastMove.col === c && lastMove.row === r) {
+                            ctx.beginPath();
+                            ctx.arc(cx, cy, stoneRadius * 0.25, 0, Math.PI * 2);
+                            ctx.fillStyle = '#e74c3c';
+                            ctx.fill();
+                        }
+                    }
+                }
+            }
+        }
+
+        function getNearestIntersection(clientX, clientY) {
             const rect = canvas.getBoundingClientRect();
             const x = (clientX - rect.left) * (canvas.width / rect.width);
             const y = (clientY - rect.top) * (canvas.height / rect.height);
-            const col = Math.round((x - MARGIN) / step);
-            const row = Math.round((y - MARGIN) / step);
+            const { step } = getMetrics();
 
-            if (col >= 0 && col < GRID_SIZE && row >= 0 && row < GRID_SIZE) {
-                const dist = Math.hypot(x - (MARGIN + col * step), y - (MARGIN + row * step));
-                if (dist <= step * 0.75) return { col, row };
-            }
-            return null;
+            const rawCol = (x - MARGIN) / step;
+            const rawRow = (y - MARGIN) / step;
+            if (rawCol < -0.75 || rawCol > GRID_SIZE - 0.25 || rawRow < -0.75 || rawRow > GRID_SIZE - 0.25) return null;
+
+            const col = Math.max(0, Math.min(GRID_SIZE - 1, Math.round(rawCol)));
+            const row = Math.max(0, Math.min(GRID_SIZE - 1, Math.round(rawRow)));
+            return { col, row };
         }
 
         canvas.addEventListener('mousemove', (e) => {
@@ -485,34 +511,36 @@
                 hoverPoint = null;
                 return;
             }
-            const pt = getNearestPoint(e.clientX, e.clientY);
-            if (JSON.stringify(pt) !== JSON.stringify(hoverPoint)) {
-                hoverPoint = pt;
+            const nearest = getNearestIntersection(e.clientX, e.clientY);
+            if (JSON.stringify(nearest) !== JSON.stringify(hoverPoint)) {
+                hoverPoint = nearest;
                 drawBoard();
             }
         });
 
-        canvas.addEventListener('mouseleave', () => { hoverPoint = null; drawBoard(); });
+        canvas.addEventListener('mouseleave', () => {
+            hoverPoint = null;
+            drawBoard();
+        });
 
         canvas.addEventListener('click', (e) => {
             if (gameEnded || (isOnline && currentTurn !== myColor)) return;
-            const pt = getNearestPoint(e.clientX, e.clientY);
-            if (!pt) return;
+            const nearest = getNearestIntersection(e.clientX, e.clientY);
+            if (!nearest) return;
 
             if (isOnline) {
-                socket.emit('playMove', { roomId, col: pt.col, row: pt.row, username });
+                socket.emit('playMove', { roomId, col: nearest.col, row: nearest.row, username });
             } else {
-                const res = executeMove(pt.col, pt.row, currentTurn);
+                const res = executeMove(nearest.col, nearest.row, currentTurn);
                 if (!res.ok) return alert(res.msg);
-                playMoveSound();
+                playStoneSound();
                 hoverPoint = null;
                 updateUI();
                 drawBoard();
-                checkMoveLimitEnd();
             }
         });
 
-        // --- LUẬT CỜ VÂY 9x9 ---
+        // --- LUẬT CỜ VÂY CHUẨN ---
         const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
         const cloneBoard = (b) => b.map(r => [...r]);
         const isSameBoard = (b1, b2) => b1 && b2 && JSON.stringify(b1) === JSON.stringify(b2);
@@ -564,18 +592,12 @@
             if (capturedCount === 0 && selfGroup.liberties === 0) return { ok: false, msg: 'Phạm luật: Nước đi tự sát!' };
             if (isSameBoard(nextBoard, prevBoard)) return { ok: false, msg: 'Phạm luật Cướp cờ (Ko)!' };
 
-            // Nếu đang ở chế độ đếm ngược Byo-yomi, đánh xong 1 nước thì hồi lại 30 giây cho lần đó
-            if (timers[color].main === 0) {
-                timers[color].byo = settings.byoSeconds;
-            }
-
             prevBoard = cloneBoard(board);
             board = nextBoard;
             captures[color] += capturedCount;
             lastMove = { col, row };
             currentTurn = enemy;
             passCount = 0;
-            moveCount++;
             return { ok: true };
         }
 
@@ -619,30 +641,15 @@
             };
         }
 
-        function checkMoveLimitEnd() {
-            if (moveCount >= settings.maxMoves && !gameEnded) {
-                gameEnded = true;
-                const res = calculateTerritoryScore();
-                const winText = res.blackTotal > res.whiteTotal ? 'QUÂN ĐEN THẮNG!' : 'QUÂN TRẮNG THẮNG!';
-                const reason = `Đạt giới hạn ${settings.maxMoves} nước đi — Đen: ${res.blackTotal} | Trắng: ${res.whiteTotal} (gồm 6.5 Komi)`;
-                if (isOnline) {
-                    socket.emit('passTurn', { roomId, username });
-                } else {
-                    showEndScreen(winText, reason, true);
-                }
-            }
-        }
-
         function updateUI() {
             document.getElementById('blackCap').innerText = captures[1];
             document.getElementById('whiteCap').innerText = captures[2];
-            document.getElementById('moveCounter').innerText = `${moveCount}/${settings.maxMoves}`;
             if (isOnline) {
                 document.getElementById('turnLabel').innerText = currentTurn === myColor ? '👉 ĐẾN LƯỢT BẠN' : '⏳ Chờ đối thủ...';
             } else {
                 document.getElementById('turnLabel').innerText = currentTurn === 1 ? 'Lượt: Quân Đen' : 'Lượt: Quân Trắng';
             }
-            updateClockDisplay();
+            renderClocks();
         }
 
         function handlePass() {
@@ -652,7 +659,6 @@
             } else {
                 passCount++;
                 if (passCount >= 2) {
-                    gameEnded = true;
                     const res = calculateTerritoryScore();
                     const winText = res.blackTotal > res.whiteTotal ? 'QUÂN ĐEN THẮNG!' : 'QUÂN TRẮNG THẮNG!';
                     showEndScreen(winText, `Đất + Tù binh — Đen: ${res.blackTotal} | Trắng: ${res.whiteTotal} (gồm 6.5 Komi)`, true);
@@ -667,12 +673,12 @@
 
         function handleResign() {
             if (gameEnded || !confirm('Bạn chắc chắn muốn đầu hàng?')) return;
-            gameEnded = true;
             if (isOnline) socket.emit('resignGame', { roomId, username });
             else showEndScreen(currentTurn === 1 ? 'QUÂN TRẮNG THẮNG!' : 'QUÂN ĐEN THẮNG!', 'Đã đầu hàng', false);
         }
 
         function showEndScreen(titleText, reasonText, isWin) {
+            gameEnded = true;
             const titleEl = document.getElementById('endTitle');
             titleEl.innerText = titleText;
             titleEl.style.color = isWin ? '#2ecc71' : '#e74c3c';
@@ -688,24 +694,17 @@
         if (isOnline) {
             socket.emit('joinGameRoom', { roomId, username });
             socket.on('syncBoard', (game) => {
-                const isNewMove = game.lastMove && (!lastMove || game.lastMove.col !== lastMove.col || game.lastMove.row !== lastMove.row);
+                const moved = JSON.stringify(game.lastMove) !== JSON.stringify(lastMove);
                 board = game.board;
                 currentTurn = game.turn;
                 if (game.captures) captures = game.captures;
-                if (game.lastMove) {
-                    lastMove = game.lastMove;
-                    moveCount++;
-                    const prevPlayer = currentTurn === 1 ? 2 : 1;
-                    if (timers[prevPlayer].main === 0) timers[prevPlayer].byo = settings.byoSeconds;
-                }
-                if (isNewMove) playMoveSound();
+                if (game.lastMove) lastMove = game.lastMove;
+                if (moved && lastMove) playStoneSound();
                 updateUI();
                 drawBoard();
-                checkMoveLimitEnd();
             });
             socket.on('invalidMove', (msg) => alert(msg));
             socket.on('matchOver', ({ winner, reason, winnerNewScore }) => {
-                gameEnded = true;
                 const isWin = winner === username;
                 showEndScreen(isWin ? 'CHIẾN THẮNG! (+1 ĐIỂM)' : 'THẤT BẠI!', reason, isWin);
                 if (isWin) sessionStorage.setItem('go_score', winnerNewScore);
@@ -714,6 +713,7 @@
         }
 
         applySettings();
+        updateUI();
         drawBoard();
     </script>
 </body>

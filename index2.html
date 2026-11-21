@@ -2,182 +2,149 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Quản Lý & Cài Đặt Cờ Vây</title>
+    <title>Cài Đặt Game Cờ Vây</title>
     <style>
         body {
-            background: #23232e;
+            background: #22222c;
             color: #fff;
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 16px;
-            font-size: 14px;
+            box-sizing: border-box;
         }
+        h3 { margin: 0 0 14px 0; color: #f5b041; font-size: 18px; border-bottom: 1px solid #3a3a4a; padding-bottom: 8px; }
         .section {
             background: #181820;
-            border: 1px solid #383846;
-            border-radius: 8px;
             padding: 12px 14px;
-            margin-bottom: 14px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border: 1px solid #2e2e3d;
         }
-        .section h3 {
-            margin: 0 0 10px 0;
-            font-size: 15px;
-            color: #f5b041;
-            border-bottom: 1px solid #2e2e3a;
-            padding-bottom: 6px;
-        }
-        .row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 8px 0;
-            gap: 10px;
-        }
-        input[type="range"] { width: 150px; accent-color: #f5b041; cursor: pointer; }
-        input[type="file"] { font-size: 12px; max-width: 210px; }
-        select {
-            background: #2b2b36;
-            color: #fff;
-            border: 1px solid #555;
-            padding: 5px 8px;
-            border-radius: 5px;
-        }
+        .section-title { font-weight: bold; font-size: 14px; color: #f5b041; margin-bottom: 8px; }
+        .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 8px 0; font-size: 13px; }
+        input[type="range"] { width: 170px; accent-color: #f5b041; cursor: pointer; }
+        input[type="file"] { font-size: 12px; color: #ccc; max-width: 210px; }
         button {
-            padding: 7px 12px;
+            padding: 6px 12px;
             border: none;
             border-radius: 5px;
             font-weight: bold;
             cursor: pointer;
-            background: #f5b041;
-            color: #181820;
+            font-size: 12px;
+            background: #4a4a5e;
+            color: #fff;
         }
-        button.reset-btn { background: #4a4a5e; color: #fff; font-size: 12px; }
-        .badge { color: #2ecc71; font-weight: bold; min-width: 38px; text-align: right; }
+        button:hover { opacity: 0.85; }
+        .btn-danger { background: #e74c3c; }
     </style>
 </head>
 <body>
+    <h3>⚙️ Cài Đặt Trò Chơi</h3>
 
-    <!-- 1. ĐIỀU CHỈNH ÂM LƯỢNG HIỆU ỨNG -->
+    <!-- 1. ÂM LƯỢNG HIỆU ỨNG -->
     <div class="section">
-        <h3>🔊 1. Âm Lượng Đặt Quân Cờ</h3>
+        <div class="section-title">🔊 1. Âm Lượng Hiệu Ứng Đặt Quân</div>
         <div class="row">
-            <span>Âm lượng hiệu ứng:</span>
-            <input type="range" id="sfxRange" min="0" max="100" value="80" oninput="saveAndNotify()">
-            <span class="badge" id="sfxVal">80%</span>
+            <span>Âm lượng: <b id="sfxText">80%</b></span>
+            <input type="range" id="sfxRange" min="0" max="100" value="80" oninput="updateAudio()">
         </div>
     </div>
 
-    <!-- 2. NHẠC NỀN TỰ CHỌN TỪ FILE -->
+    <!-- 2. NHẠC NỀN GAME -->
     <div class="section">
-        <h3>🎵 2. Nhạc Nền Game (Tự Chọn File)</h3>
+        <div class="section-title">🎵 2. Nhạc Nền Game (Tự Chọn File)</div>
         <div class="row">
-            <span>Chọn file nhạc (.mp3):</span>
-            <input type="file" id="bgmFile" accept="audio/*" onchange="handleBgmFile(this)">
+            <input type="file" id="bgmFile" accept="audio/*" onchange="uploadBgm(this)">
+            <button class="btn-danger" onclick="clearBgm()">Xóa nhạc</button>
         </div>
+        <div id="bgmStatus" style="font-size: 12px; color: #2ecc71; margin-bottom: 6px;"></div>
         <div class="row">
-            <span>Âm lượng nhạc nền:</span>
-            <input type="range" id="bgmRange" min="0" max="100" value="40" oninput="saveAndNotify()">
-            <span class="badge" id="bgmVal">40%</span>
+            <span>Âm lượng nhạc nền: <b id="bgmText">40%</b></span>
+            <input type="range" id="bgmRange" min="0" max="100" value="40" oninput="updateAudio()">
         </div>
     </div>
 
-    <!-- 3. BACKGROUND TỰ CHỌN ẢNH -->
+    <!-- 3. HÌNH NỀN BACKGROUND -->
     <div class="section">
-        <h3>🖼️ 3. Hình Nền (Background)</h3>
+        <div class="section-title">🖼️ 3. Hình Nền (Background Bên Ngoài)</div>
         <div class="row">
-            <span>Tải ảnh nền lên:</span>
-            <input type="file" id="bgFile" accept="image/*" onchange="handleBgFile(this)">
+            <input type="file" id="bgFile" accept="image/*" onchange="uploadBg(this)">
+            <button class="btn-danger" onclick="clearBg()">Mặc định</button>
         </div>
-        <div class="row">
-            <span style="color:#aaa; font-size:12px;">Thay thế nền tối bên ngoài bàn cờ</span>
-            <button class="reset-btn" onclick="resetBackground()">Xóa ảnh nền</button>
-        </div>
-    </div>
-
-    <!-- 4. LUẬT THI ĐẤU CHUẨN 9x9 -->
-    <div class="section">
-        <h3>⏱️ 4. Luật Thời Gian & Số Nước (9x9)</h3>
-        <div class="row">
-            <span>Thời gian chính mỗi bên:</span>
-            <select id="mainTimeSel" onchange="saveAndNotify()">
-                <option value="10">10 phút</option>
-                <option value="12">12 phút</option>
-                <option value="15">15 phút</option>
-            </select>
-        </div>
-        <div class="row">
-            <span>Đếm ngược (Byo-yomi):</span>
-            <span style="color:#2ecc71; font-weight:bold;">3 lần × 30 giây</span>
-        </div>
-        <div class="row">
-            <span>Giới hạn kết thúc ván:</span>
-            <select id="maxMovesSel" onchange="saveAndNotify()">
-                <option value="40">40 nước đi</option>
-                <option value="50">50 nước đi</option>
-                <option value="60" selected>60 nước đi</option>
-            </select>
-        </div>
+        <div id="bgStatus" style="font-size: 12px; color: #2ecc71;"></div>
     </div>
 
     <script>
-        function loadSaved() {
-            const sfx = Math.round((Number(localStorage.getItem('go_sfx_vol') ?? 0.8)) * 100);
-            const bgm = Math.round((Number(localStorage.getItem('go_bgm_vol') ?? 0.4)) * 100);
-            const min = localStorage.getItem('go_main_min') || '10';
-            const moves = localStorage.getItem('go_max_moves') || '60';
-
-            document.getElementById('sfxRange').value = sfx;
-            document.getElementById('sfxVal').innerText = sfx + '%';
-            document.getElementById('bgmRange').value = bgm;
-            document.getElementById('bgmVal').innerText = bgm + '%';
-            document.getElementById('mainTimeSel').value = min;
-            document.getElementById('maxMovesSel').value = moves;
+        function notifyParent() {
+            if (window.parent) window.parent.postMessage('settingsUpdated', '*');
         }
 
-        function saveAndNotify() {
+        function loadSaved() {
+            const sfx = Math.round((Number(localStorage.getItem('go_sfxVol') ?? 0.8)) * 100);
+            const bgm = Math.round((Number(localStorage.getItem('go_bgmVol') ?? 0.4)) * 100);
+            document.getElementById('sfxRange').value = sfx;
+            document.getElementById('sfxText').innerText = sfx + '%';
+            document.getElementById('bgmRange').value = bgm;
+            document.getElementById('bgmText').innerText = bgm + '%';
+
+            if (localStorage.getItem('go_bgmName')) {
+                document.getElementById('bgmStatus').innerText = 'Đang dùng: ' + localStorage.getItem('go_bgmName');
+            }
+            if (localStorage.getItem('go_bgImgData')) {
+                document.getElementById('bgStatus').innerText = '✅ Đã áp dụng ảnh nền tùy chỉnh';
+            }
+        }
+
+        function updateAudio() {
             const sfx = document.getElementById('sfxRange').value;
             const bgm = document.getElementById('bgmRange').value;
-            const min = document.getElementById('mainTimeSel').value;
-            const moves = document.getElementById('maxMovesSel').value;
-
-            document.getElementById('sfxVal').innerText = sfx + '%';
-            document.getElementById('bgmVal').innerText = bgm + '%';
-
-            localStorage.setItem('go_sfx_vol', sfx / 100);
-            localStorage.setItem('go_bgm_vol', bgm / 100);
-            localStorage.setItem('go_main_min', min);
-            localStorage.setItem('go_byo_periods', '3');
-            localStorage.setItem('go_byo_sec', '30');
-            localStorage.setItem('go_max_moves', moves);
-
-            window.parent.postMessage({ type: 'SETTINGS_UPDATED' }, '*');
+            document.getElementById('sfxText').innerText = sfx + '%';
+            document.getElementById('bgmText').innerText = bgm + '%';
+            localStorage.setItem('go_sfxVol', sfx / 100);
+            localStorage.setItem('go_bgmVol', bgm / 100);
+            notifyParent();
         }
 
-        function handleBgmFile(input) {
+        function uploadBgm(input) {
             const file = input.files[0];
             if (!file) return;
-            const url = URL.createObjectURL(file);
-            window.parent.postMessage({ type: 'BGM_SELECTED', url }, '*');
-        }
-
-        function handleBgFile(input) {
-            const file = input.files[0];
-            if (!file) return;
+            if (file.size > 4.5 * 1024 * 1024) {
+                alert('File nhạc hơi lớn (>4.5MB), hãy chọn file nhẹ hơn để lưu mượt trên trình duyệt!');
+                return;
+            }
             const reader = new FileReader();
             reader.onload = (e) => {
-                try {
-                    localStorage.setItem('go_bg_image', e.target.result);
-                } catch (err) {
-                    alert('Ảnh quá nặng để lưu tự động, nhưng vẫn sẽ áp dụng cho ván hiện tại!');
-                }
-                window.parent.postMessage({ type: 'SETTINGS_UPDATED' }, '*');
+                localStorage.setItem('go_bgmData', e.target.result);
+                localStorage.setItem('go_bgmName', file.name);
+                document.getElementById('bgmStatus').innerText = 'Đang dùng: ' + file.name;
+                notifyParent();
             };
             reader.readAsDataURL(file);
         }
 
-        function resetBackground() {
-            localStorage.removeItem('go_bg_image');
-            window.parent.postMessage({ type: 'SETTINGS_UPDATED' }, '*');
+        function clearBgm() {
+            localStorage.removeItem('go_bgmData');
+            localStorage.removeItem('go_bgmName');
+            document.getElementById('bgmStatus').innerText = 'Đã tắt nhạc nền';
+            notifyParent();
+        }
+
+        function uploadBg(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                localStorage.setItem('go_bgImgData', e.target.result);
+                document.getElementById('bgStatus').innerText = '✅ Đã áp dụng ảnh nền tùy chỉnh';
+                notifyParent();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearBg() {
+            localStorage.removeItem('go_bgImgData');
+            document.getElementById('bgStatus').innerText = 'Đã trả về nền mặc định';
+            notifyParent();
         }
 
         loadSaved();
