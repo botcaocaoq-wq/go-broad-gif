@@ -23,48 +23,30 @@
             background: #2b2b36;
             padding: 8px 16px;
             border-radius: 8px;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         }
         .stat-box { background: #16161d; padding: 6px 12px; border-radius: 6px; font-size: 14px; }
-        
-        /* Khung chứa bàn cờ to bằng khung đỏ bạn đánh dấu */
-        .board-wrapper {
-            position: relative;
-            width: min(86vh, 92vw);
-            height: min(86vh, 92vw);
+        .board-container {
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.85);
             border-radius: 8px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            overflow: hidden;
+            background: #d89b56;
         }
         canvas {
-            width: 100%;
-            height: 100%;
-            cursor: pointer;
             display: block;
+            cursor: pointer;
+            max-width: 92vw;
+            max-height: 82vh;
+            width: auto;
+            height: auto;
         }
-        button { padding: 7px 13px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        button { padding: 7px 14px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
         .btn-pass { background: #f39c12; color: #000; }
         .btn-resign { background: #e74c3c; color: #fff; }
-
-        /* Bảng căn chỉnh tọa độ trực tiếp bằng mắt thường */
-        .calibrator {
-            position: fixed;
-            bottom: 12px;
-            right: 12px;
-            background: rgba(30, 30, 40, 0.95);
-            border: 1px solid #f5b041;
-            padding: 10px 14px;
-            border-radius: 8px;
-            font-size: 13px;
-            z-index: 900;
-        }
-        .calibrator div { margin: 5px 0; display: flex; justify-content: space-between; gap: 10px; align-items: center; }
-        .calibrator button { padding: 2px 8px; background: #4a4a5e; color: #fff; }
-
         .overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.88);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
@@ -83,35 +65,8 @@
         <button class="btn-resign" onclick="handleResign()">Đầu Hàng</button>
     </div>
 
-    <div class="board-wrapper">
-        <canvas id="goCanvas" width="1200" height="1200"></canvas>
-    </div>
-
-    <!-- CÔNG CỤ CĂN KHỚP TỌA ĐỘ TRỰC TIẾP -->
-    <div class="calibrator" id="calBox">
-        <strong style="color:#f5b041;">Căn chỉnh quân cờ khớp lưới:</strong>
-        <div>
-            <span>Lề trái/phải (%): <b id="valMarginX">3.6</b></span>
-            <span>
-                <button onclick="adj('mx', -0.2)">-</button>
-                <button onclick="adj('mx', 0.2)">+</button>
-            </span>
-        </div>
-        <div>
-            <span>Lề trên (%): <b id="valMarginTop">21.5</b></span>
-            <span>
-                <button onclick="adj('mt', -0.5)">-</button>
-                <button onclick="adj('mt', 0.5)">+</button>
-            </span>
-        </div>
-        <div>
-            <span>Lề dưới (%): <b id="valMarginBot">21.5</b></span>
-            <span>
-                <button onclick="adj('mb', -0.5)">-</button>
-                <button onclick="adj('mb', 0.5)">+</button>
-            </span>
-        </div>
-        <button onclick="document.getElementById('calBox').style.display='none'" style="width:100%; margin-top:5px; background:#2ecc71; color:#000;">Ẩn bảng chỉnh</button>
+    <div class="board-container">
+        <canvas id="goCanvas"></canvas>
     </div>
 
     <div class="overlay hidden" id="endOverlay">
@@ -126,24 +81,15 @@
         const ctx = canvas.getContext('2d');
         const GRID_SIZE = 19;
 
-        let cal = {
-            mx: Number(localStorage.getItem('go_mx')) || 3.6,
-            mt: Number(localStorage.getItem('go_mt')) || 21.5,
-            mb: Number(localStorage.getItem('go_mb')) || 21.5
-        };
-
-        function adj(key, delta) {
-            cal[key] = Math.round((cal[key] + delta) * 10) / 10;
-            localStorage.setItem('go_' + key, cal[key]);
-            document.getElementById('valMarginX').innerText = cal.mx;
-            document.getElementById('valMarginTop').innerText = cal.mt;
-            document.getElementById('valMarginBot').innerText = cal.mb;
-            drawBoard();
-        }
-
-        document.getElementById('valMarginX').innerText = cal.mx;
-        document.getElementById('valMarginTop').innerText = cal.mt;
-        document.getElementById('valMarginBot').innerText = cal.mb;
+        // Thông số chuẩn đo từ Krita:
+        // Khung gỗ thật: 2800 x 2747.3 px
+        // Bước nhảy ô: 144.0 px | Bán kính quân cờ: 61.8 px (Đường kính = 123.6 px)
+        const BOARD_W = 2800.0;
+        const BOARD_H = 2747.3;
+        const STEP = 144.0;
+        const STONE_DIAMETER = 61.8 * 2; // 123.6 px chuẩn xác theo bán kính bạn đo
+        const MARGIN_X = (BOARD_W - STEP * (GRID_SIZE - 1)) / 2; // 104.0 px
+        const MARGIN_Y = (BOARD_H - STEP * (GRID_SIZE - 1)) / 2; // 77.65 px
 
         const username = sessionStorage.getItem('go_username');
         const roomId = sessionStorage.getItem('go_roomId');
@@ -174,8 +120,9 @@
         [boardImg, blackImg, whiteImg].forEach(img => {
             img.onload = () => {
                 if (++loadedCount === 3) {
-                    canvas.width = 1200;
-                    canvas.height = 1200;
+                    // Khóa đúng độ phân giải thật của khung bàn cờ để không bao giờ bị méo tỷ lệ
+                    canvas.width = Math.round(BOARD_W);
+                    canvas.height = Math.round(BOARD_H);
                     if (isOnline) socket.emit('joinGameRoom', { roomId, username });
                     updateUI();
                     drawBoard();
@@ -183,49 +130,47 @@
             };
         });
 
-        function getMetrics() {
+        function getCropRegion() {
             const iw = boardImg.naturalWidth;
             const ih = boardImg.naturalHeight;
-            const cropY = Math.max(0, (ih - iw) / 2);
-            const cropH = Math.min(ih, iw);
+            const targetRatio = BOARD_W / BOARD_H;
+            const imgRatio = iw / ih;
 
-            const left = (cal.mx / 100) * canvas.width;
-            const right = canvas.width - left;
-            const topOrigPx = (cal.mt / 100) * ih;
-            const botOrigPx = ih - (cal.mb / 100) * ih;
-            const top = ((topOrigPx - cropY) / cropH) * canvas.height;
-            const bottom = ((botOrigPx - cropY) / cropH) * canvas.height;
-
-            const stepX = (right - left) / (GRID_SIZE - 1);
-            const stepY = (bottom - top) / (GRID_SIZE - 1);
-            return { iw, ih, cropY, cropH, left, top, stepX, stepY };
+            let sx = 0, sy = 0, sw = iw, sh = ih;
+            if (imgRatio < targetRatio) {
+                sh = iw / targetRatio;
+                sy = (ih - sh) / 2;
+            } else if (imgRatio > targetRatio) {
+                sw = ih * targetRatio;
+                sx = (iw - sw) / 2;
+            }
+            return { sx, sy, sw, sh };
         }
 
         function drawBoard() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const m = getMetrics();
+            const crop = getCropRegion();
+            ctx.drawImage(boardImg, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, canvas.width, canvas.height);
 
-            ctx.drawImage(boardImg, 0, m.cropY, m.iw, m.cropH, 0, 0, canvas.width, canvas.height);
-
-            const stoneSize = Math.min(m.stepX, m.stepY) * 0.92;
-
+            // Vẽ quân cờ hình vuông bằng đúng đường kính 123.6 px (bán kính 61.8 px) -> Tròn xoe 100%
             for (let col = 0; col < GRID_SIZE; col++) {
                 for (let row = 0; row < GRID_SIZE; row++) {
                     const stone = board[col][row];
                     if (stone !== 0) {
-                        const cx = m.left + col * m.stepX;
-                        const cy = m.top + row * m.stepY;
+                        const cx = MARGIN_X + col * STEP;
+                        const cy = MARGIN_Y + row * STEP;
+                        const img = stone === 1 ? blackImg : whiteImg;
                         ctx.drawImage(
-                            stone === 1 ? blackImg : whiteImg,
-                            cx - stoneSize / 2,
-                            cy - stoneSize / 2,
-                            stoneSize,
-                            stoneSize
+                            img,
+                            cx - STONE_DIAMETER / 2,
+                            cy - STONE_DIAMETER / 2,
+                            STONE_DIAMETER,
+                            STONE_DIAMETER
                         );
 
                         if (lastMove && lastMove.col === col && lastMove.row === row) {
                             ctx.beginPath();
-                            ctx.arc(cx, cy, stoneSize * 0.16, 0, Math.PI * 2);
+                            ctx.arc(cx, cy, STONE_DIAMETER * 0.16, 0, Math.PI * 2);
                             ctx.fillStyle = '#e74c3c';
                             ctx.fill();
                         }
@@ -234,7 +179,7 @@
             }
         }
 
-        const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+        const DIRS = [, [-1, 0],, [0, -1]];
         const cloneBoard = (b) => b.map(r => [...r]);
         const isSameBoard = (b1, b2) => b1 && b2 && JSON.stringify(b1) === JSON.stringify(b2);
 
@@ -295,8 +240,8 @@
         }
 
         function updateUI() {
-            document.getElementById('blackCap').innerText = captures[1];
-            document.getElementById('whiteCap').innerText = captures[2];
+            document.getElementById('blackCap').innerText = captures;
+            document.getElementById('whiteCap').innerText = captures;
             if (isOnline) {
                 document.getElementById('turnLabel').innerText = currentTurn === myColor ? '👉 ĐẾN LƯỢT BẠN' : '⏳ Chờ đối thủ...';
             } else {
@@ -309,10 +254,9 @@
             const rect = canvas.getBoundingClientRect();
             const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
             const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
-            const m = getMetrics();
 
-            const col = Math.round((clickX - m.left) / m.stepX);
-            const row = Math.round((clickY - m.top) / m.stepY);
+            const col = Math.round((clickX - MARGIN_X) / STEP);
+            const row = Math.round((clickY - MARGIN_Y) / STEP);
 
             if (col >= 0 && col < GRID_SIZE && row >= 0 && row < GRID_SIZE) {
                 if (isOnline) {
@@ -332,8 +276,8 @@
             } else {
                 passCount++;
                 if (passCount >= 2) {
-                    const blackScore = captures[1];
-                    const whiteScore = captures[2] + 6.5;
+                    const blackScore = captures;
+                    const whiteScore = captures + 6.5;
                     showEndScreen(blackScore > whiteScore ? 'QUÂN ĐEN THẮNG!' : 'QUÂN TRẮNG THẮNG!', `Đen: ${blackScore} | Trắng: ${whiteScore}`, true);
                 } else {
                     currentTurn = currentTurn === 1 ? 2 : 1;
