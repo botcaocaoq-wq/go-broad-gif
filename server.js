@@ -28,7 +28,8 @@ function broadcastOnlineList() {
     io.emit('onlineList', list);
 }
 
-const SIZE = 19;
+// --- LUẬT CỜ VÂY CHUẨN 9x9 ---
+const SIZE = 9;
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const cloneBoard = (b) => b.map(row => [...row]);
 const boardsEqual = (b1, b2) => b1 && b2 && JSON.stringify(b1) === JSON.stringify(b2);
@@ -60,7 +61,7 @@ function getGroupAndLiberties(board, startCol, startRow) {
 }
 
 function tryPlayMove(game, col, row, color) {
-    if (game.board[col][row] !== 0) return { ok: false, msg: 'Ô này đã có quân!' };
+    if (game.board[col][row] !== 0) return { ok: false, msg: 'Giao điểm này đã có quân!' };
 
     const nextBoard = cloneBoard(game.board);
     nextBoard[col][row] = color;
@@ -80,11 +81,11 @@ function tryPlayMove(game, col, row, color) {
 
     const selfCheck = getGroupAndLiberties(nextBoard, col, row);
     if (capturedCount === 0 && selfCheck.liberties === 0) {
-        return { ok: false, msg: 'Nước đi tự sát không hợp lệ!' };
+        return { ok: false, msg: 'Phạm luật: Điểm tự sát không hợp lệ!' };
     }
 
     if (boardsEqual(nextBoard, game.prevBoard)) {
-        return { ok: false, msg: 'Phạm luật Cướp cờ (Ko)! Hãy đánh chỗ khác trước.' };
+        return { ok: false, msg: 'Phạm luật Ko: Không được lặp lại thế cờ ngay trước đó!' };
     }
 
     game.prevBoard = cloneBoard(game.board);
@@ -94,6 +95,46 @@ function tryPlayMove(game, col, row, color) {
     game.turn = opponent;
     game.passCount = 0;
     return { ok: true };
+}
+
+function calculateTerritoryScore(game) {
+    const visited = Array.from({ length: SIZE }, () => Array(SIZE).fill(false));
+    let blackTerritory = 0, whiteTerritory = 0;
+
+    for (let c = 0; c < SIZE; c++) {
+        for (let r = 0; r < SIZE; r++) {
+            if (game.board[c][r] === 0 && !visited[c][r]) {
+                const region = [];
+                const borders = new Set();
+                const queue = [[c, r]];
+                visited[c][r] = true;
+
+                while (queue.length > 0) {
+                    const [cc, cr] = queue.shift();
+                    region.push([cc, cr]);
+                    for (const [dc, dr] of DIRS) {
+                        const nc = cc + dc, nr = cr + dr;
+                        if (nc >= 0 && nc < SIZE && nr >= 0 && nr < SIZE) {
+                            if (game.board[nc][nr] === 0 && !visited[nc][nr]) {
+                                visited[nc][nr] = true;
+                                queue.push([nc, nr]);
+                            } else if (game.board[nc][nr] !== 0) {
+                                borders.add(game.board[nc][nr]);
+                            }
+                        }
+                    }
+                }
+                if (borders.size === 1) {
+                    if (borders.has(1)) blackTerritory += region.length;
+                    if (borders.has(2)) whiteTerritory += region.length;
+                }
+            }
+        }
+    }
+    return {
+        blackTotal: blackTerritory + game.captures[1],
+        whiteTotal: whiteTerritory + game.captures[2] + 6.5
+    };
 }
 
 io.on('connection', (socket) => {
@@ -113,7 +154,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Giữ trạng thái online suốt khi mở web (kể cả khi chuyển cửa sổ test)
     socket.on('setTabActive', ({ username, active }) => {
         if (!username || !users[username]) return;
         onlinePlayers[socket.id] = {
@@ -184,11 +224,10 @@ io.on('connection', (socket) => {
 
         game.passCount++;
         if (game.passCount >= 2) {
-            let blackCount = game.captures[1];
-            let whiteCount = game.captures[2] + 6.5;
-            const winner = blackCount > whiteCount ? game.black : game.white;
+            const scoreRes = calculateTerritoryScore(game);
+            const winner = scoreRes.blackTotal > scoreRes.whiteTotal ? game.black : game.white;
             const loser = winner === game.black ? game.white : game.black;
-            finishMatch(roomId, winner, loser, `Hết lượt — Đen: ${blackCount} | Trắng: ${whiteCount}`);
+            finishMatch(roomId, winner, loser, `Đất + Tù binh — Đen: ${scoreRes.blackTotal} | Trắng: ${scoreRes.whiteTotal} (gồm 6.5 Komi)`);
         } else {
             game.turn = playerColor === 1 ? 2 : 1;
             io.to(roomId).emit('syncBoard', game);
