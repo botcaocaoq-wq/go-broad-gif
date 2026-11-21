@@ -9,16 +9,15 @@
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
+            background-attachment: fixed;
             color: #fff;
             font-family: Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 10px;
-            box-sizing: border-box;
+            margin: 10px;
             user-select: none;
+            min-height: 96vh;
         }
         .hud {
             display: flex;
@@ -33,55 +32,98 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
             backdrop-filter: blur(4px);
         }
-        .stat-box { background: #16161d; padding: 6px 12px; border-radius: 6px; font-size: 14px; }
-        .clock-box {
-            background: #16161d;
-            padding: 6px 14px;
+        .stat-box { background: #14141b; padding: 6px 12px; border-radius: 6px; font-size: 14px; }
+        .timer-box {
+            background: #14141b;
+            padding: 6px 12px;
             border-radius: 6px;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: bold;
-            border: 2px solid transparent;
+            border: 1px solid #3a3a4a;
             transition: 0.2s;
         }
-        .clock-active { border-color: #f5b041; color: #f5b041; }
-        .clock-danger {
-            background: #c0392b !important;
-            border-color: #ff7675 !important;
-            color: #fff !important;
-            animation: pulse 0.8s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.04); }
-        }
+        .timer-active { border-color: #f5b041; color: #f5b041; }
+        .timer-danger { background: #c0392b !important; border-color: #ff7675 !important; color: #fff !important; animation: pulse 0.8s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+
         canvas {
             box-shadow: 0 12px 35px rgba(0,0,0,0.85);
             cursor: pointer;
-            max-width: 92vw;
+            max-width: 90vw;
             max-height: 78vh;
             border-radius: 8px;
         }
-        button { padding: 7px 13px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        button:hover { opacity: 0.88; }
+        button { padding: 7px 13px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:hover { opacity: 0.85; }
         .btn-pass { background: #f39c12; color: #000; }
         .btn-resign { background: #e74c3c; color: #fff; }
-        .btn-setting {
+        .btn-sound { background: #2980b9; color: #fff; }
+
+        /* Nút Setting cố định góc dưới bên phải */
+        .setting-btn {
             position: fixed;
-            bottom: 16px;
-            right: 16px;
+            bottom: 18px;
+            right: 18px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
             background: #2b2b36;
             color: #f5b041;
-            border: 1px solid #f5b041;
-            padding: 10px 16px;
-            font-size: 15px;
-            border-radius: 8px;
+            border: 2px solid #f5b041;
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             box-shadow: 0 4px 15px rgba(0,0,0,0.6);
-            z-index: 800;
+            z-index: 950;
+            padding: 0;
         }
+        .setting-btn:hover { transform: rotate(45deg); }
+
+        /* Bảng Setting nổi nhỏ gọn ngay bên trong trang, không nhảy sang cửa sổ riêng */
+        .setting-modal {
+            position: fixed;
+            bottom: 76px;
+            right: 18px;
+            width: 340px;
+            height: 430px;
+            background: #1e1e26;
+            border: 2px solid #f5b041;
+            border-radius: 12px;
+            box-shadow: 0 10px 35px rgba(0,0,0,0.85);
+            z-index: 960;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .setting-header {
+            background: #2b2b36;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: #f5b041;
+            border-bottom: 1px solid #3a3a4a;
+        }
+        .setting-header button {
+            background: #e74c3c;
+            color: #fff;
+            padding: 3px 9px;
+            font-size: 12px;
+        }
+        .setting-modal iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #1e1e26;
+        }
+
         .overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.88);
+            position: fixed; inset: 0; background: rgba(0,0,0,0.9);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 1000; text-align: center; padding: 20px;
+            z-index: 1000; text-align: center;
         }
         .hidden { display: none !important; }
     </style>
@@ -90,30 +132,40 @@
 
     <div class="hud">
         <div class="stat-box" id="playerLabel">Chế độ: Chơi thử 2 người</div>
-        <div class="clock-box clock-active" id="blackClockBox">⚫ Đen: <span id="blackClock">05:00</span></div>
-        <div class="clock-box" id="whiteClockBox">⚪ Trắng: <span id="whiteClock">05:00</span></div>
+        <div class="timer-box timer-active" id="blackTimerBox">⚫ Đen: <span id="blackTimeText">05:00</span></div>
+        <div class="timer-box" id="whiteTimerBox">⚪ Trắng: <span id="whiteTimeText">05:00</span></div>
         <div class="stat-box">Tù binh — Đen: <strong id="blackCap">0</strong> | Trắng: <strong id="whiteCap">0</strong></div>
+        <button class="btn-sound" id="soundToggleBtn" onclick="toggleSound()">🔊 Âm thanh: Bật</button>
         <button class="btn-pass" onclick="handlePass()">Bỏ Lượt (Pass)</button>
         <button class="btn-resign" onclick="handleResign()">Đầu Hàng</button>
     </div>
 
-    <canvas id="goCanvas" width="1000" height="1000"></canvas>
+    <canvas id="goCanvas" width="900" height="900"></canvas>
 
-    <button class="btn-setting" onclick="openSettings()">⚙️ Setting</button>
+    <!-- Nút Setting & Bảng Cài Đặt Nổi Tại Chỗ -->
+    <button class="setting-btn" title="Cài đặt (Setting)" onclick="toggleSettingPanel()">⚙️</button>
+    <div class="setting-modal hidden" id="settingModal">
+        <div class="setting-header">
+            <span>⚙️ Cài Đặt Trò Chơi</span>
+            <button onclick="toggleSettingPanel()">Đóng ✕</button>
+        </div>
+        <iframe src="/index2.html" id="settingFrame"></iframe>
+    </div>
 
     <div class="overlay hidden" id="endOverlay">
-        <h1 id="endTitle" style="font-size: 46px; margin-bottom: 10px;"></h1>
-        <p id="endReason" style="font-size: 20px; color: #ddd; margin-bottom: 26px;"></p>
-        <button onclick="exitMatch()" style="padding: 12px 28px; font-size: 16px; background: #2ecc71; color: #000;">Quay về sảnh tìm người chơi</button>
+        <h1 id="endTitle" style="font-size: 46px; margin-bottom: 8px;"></h1>
+        <p id="endReason" style="font-size: 19px; color: #ccc; margin-bottom: 24px;"></p>
+        <button onclick="exitMatch()" style="padding: 12px 26px; font-size: 16px; background: #2ecc71; color: #000;">Quay về sảnh</button>
     </div>
+
+    <audio id="bgMusicPlayer" loop></audio>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const canvas = document.getElementById('goCanvas');
         const ctx = canvas.getContext('2d');
         const GRID_SIZE = 9;
-        const MARGIN = 115;
-        const INITIAL_TIME_MS = 5 * 60 * 1000; // 5 phút chuẩn Cờ Vua Blitz
+        const COLS_LABEL = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
 
         const username = sessionStorage.getItem('go_username');
         const roomId = sessionStorage.getItem('go_roomId');
@@ -123,49 +175,62 @@
         const socket = isOnline ? io() : null;
 
         if (isOnline) {
-            document.getElementById('playerLabel').innerText = `Bạn: ${username} (${myColor === 1 ? 'Đen' : 'Trắng'}) vs ${opponent}`;
+            document.getElementById('playerLabel').innerText = `${username} (${myColor === 1 ? 'Đen' : 'Trắng'}) vs ${opponent}`;
         }
 
-        // --- HỆ THỐNG CÀI ĐẶT TỪ index2.html ---
-        let sfxVolume = Number(localStorage.getItem('go_sfx_vol') ?? 0.8);
-        let bgmVolume = Number(localStorage.getItem('go_bgm_vol') ?? 0.4);
-        const bgmAudio = new Audio();
-        bgmAudio.loop = true;
+        // --- MỞ / ĐÓNG BẢNG SETTING NỔI NGAY TRONG MÀN HÌNH ---
+        function toggleSettingPanel() {
+            const modal = document.getElementById('settingModal');
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) {
+                document.getElementById('settingFrame').src = '/index2.html';
+            }
+        }
 
-        function applySettings() {
-            sfxVolume = Number(localStorage.getItem('go_sfx_vol') ?? 0.8);
-            bgmVolume = Number(localStorage.getItem('go_bgm_vol') ?? 0.4);
-            bgmAudio.volume = bgmVolume;
+        // --- QUẢN LÝ CÀI ĐẶT TỪ INDEX2.HTML ---
+        let sfxVolume = 1.0;
+        let bgmVolume = 0.5;
+        let soundEnabled = true;
 
-            const savedBg = localStorage.getItem('go_custom_bg');
-            if (savedBg) {
-                document.body.style.backgroundImage = `url('${savedBg}')`;
+        function applySettingsFromStorage() {
+            const savedSfx = localStorage.getItem('go_sfx_vol');
+            if (savedSfx !== null) sfxVolume = Number(savedSfx) / 100;
+
+            const savedBgmVol = localStorage.getItem('go_bgm_vol');
+            if (savedBgmVol !== null) bgmVolume = Number(savedBgmVol) / 100;
+
+            const bgmData = localStorage.getItem('go_bgm_data');
+            const bgPlayer = document.getElementById('bgMusicPlayer');
+            bgPlayer.volume = soundEnabled ? bgmVolume : 0;
+            if (bgmData) {
+                if (bgPlayer.src !== bgmData) {
+                    bgPlayer.src = bgmData;
+                }
+                if (soundEnabled && bgPlayer.paused) {
+                    bgPlayer.play().catch(() => {});
+                }
+            } else {
+                bgPlayer.pause();
+                bgPlayer.removeAttribute('src');
+            }
+
+            const bgImg = localStorage.getItem('go_custom_bg');
+            if (bgImg) {
+                document.body.style.backgroundImage = `url('${bgImg}')`;
             } else {
                 document.body.style.backgroundImage = 'none';
             }
-
-            const savedBgm = localStorage.getItem('go_custom_bgm');
-            if (savedBgm && bgmAudio.src !== savedBgm) {
-                bgmAudio.src = savedBgm;
-                bgmAudio.play().catch(() => {});
-            } else if (!savedBgm) {
-                bgmAudio.pause();
-            }
         }
-        applySettings();
 
-        window.addEventListener('storage', (e) => {
-            if (['go_sfx_vol', 'go_bgm_vol', 'go_custom_bg', 'go_custom_bgm'].includes(e.key)) {
-                applySettings();
-            }
+        window.addEventListener('storage', applySettingsFromStorage);
+        window.addEventListener('message', (e) => {
+            if (e.data === 'settingsUpdated') applySettingsFromStorage();
         });
-
-        function openSettings() {
-            window.open('/index2.html', 'GoSettingPopup', 'width=460,height=560,resizable=yes');
-        }
+        applySettingsFromStorage();
 
         // --- HỆ THỐNG ÂM THANH ĐẶT QUÂN ---
-        const moveAudio = new Audio('/sound.mp3');
+        const moveSound = new Audio('/sound.mp3');
+        moveSound.preload = 'auto';
         let audioCtx = null;
 
         function unlockAudio() {
@@ -174,244 +239,222 @@
                 if (AudioContext) audioCtx = new AudioContext();
             }
             if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-            if (bgmAudio.src && bgmAudio.paused && bgmVolume > 0) {
-                bgmAudio.play().catch(() => {});
+            const bgPlayer = document.getElementById('bgMusicPlayer');
+            if (soundEnabled && bgPlayer.src && bgPlayer.paused) {
+                bgPlayer.play().catch(() => {});
             }
         }
-        document.addEventListener('pointerdown', unlockAudio, { once: true });
+        window.addEventListener('pointerdown', unlockAudio);
 
-        function playStoneSound() {
+        function playSynthStoneClick() {
             if (sfxVolume <= 0) return;
-            unlockAudio();
-            moveAudio.volume = sfxVolume;
-            moveAudio.currentTime = 0;
-            moveAudio.play().catch(() => {
+            try {
+                unlockAudio();
                 if (!audioCtx) return;
+                const now = audioCtx.currentTime;
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
                 osc.type = 'triangle';
-                osc.frequency.setValueAtTime(520, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(110, audioCtx.currentTime + 0.06);
-                gain.gain.setValueAtTime(sfxVolume * 0.7, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.07);
+                osc.frequency.setValueAtTime(520, now);
+                osc.frequency.exponentialRampToValueAtTime(110, now + 0.045);
+                gain.gain.setValueAtTime(0.65 * sfxVolume, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.055);
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.07);
-            });
+                osc.start(now);
+                osc.stop(now + 0.06);
+            } catch (e) {}
         }
 
-        // --- TRẠNG THÁI VÁN CỜ & LƯU TRỮ CHỐNG RESET KHI F5 ---
-        const OFFLINE_SAVE_KEY = 'go_offline_state_v1';
+        function playStoneSound() {
+            if (!soundEnabled || sfxVolume <= 0) return;
+            try {
+                moveSound.volume = sfxVolume;
+                moveSound.currentTime = 0;
+                const p = moveSound.play();
+                if (p !== undefined) p.catch(() => playSynthStoneClick());
+            } catch (e) {
+                playSynthStoneClick();
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const btn = document.getElementById('soundToggleBtn');
+            btn.innerText = soundEnabled ? '🔊 Âm thanh: Bật' : '🔇 Âm thanh: Tắt';
+            btn.style.background = soundEnabled ? '#2980b9' : '#555';
+            applySettingsFromStorage();
+            if (soundEnabled) playStoneSound();
+        }
+
+        // --- TRẠNG THÁI VÁN CỜ & CHỐNG RESET KHI F5 ---
+        const STATE_KEY = 'go_offline_state_v1';
         let board = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(0));
         let prevBoard = null;
         let currentTurn = 1;
         let captures = { 1: 0, 2: 0 };
         let lastMove = null;
         let passCount = 0;
-        let isGameOver = false;
-        let hoverPoint = null;
+        let gameOver = false;
 
-        // Thời gian lưu dạng mốc chuẩn xác (không bao giờ reset khi F5 / Reload web)
-        let timeLeft = { 1: INITIAL_TIME_MS, 2: INITIAL_TIME_MS };
-        let lastTick = Date.now();
+        // Quỹ thời gian 5 phút (300 giây) cho mỗi người chơi
+        let timeLeft = { 1: 300, 2: 300 };
+        let lastTickTime = Date.now();
+        let timerInterval = null;
 
         function saveOfflineState() {
-            if (isOnline || isGameOver) return;
-            const state = {
-                board,
-                prevBoard,
-                currentTurn,
-                captures,
-                lastMove,
-                passCount,
-                timeLeft,
-                lastTick
-            };
-            localStorage.setItem(OFFLINE_SAVE_KEY, JSON.stringify(state));
+            if (isOnline || gameOver) return;
+            localStorage.setItem(STATE_KEY, JSON.stringify({
+                board, prevBoard, currentTurn, captures, lastMove, passCount,
+                timeLeft, lastTickTime: Date.now()
+            }));
         }
 
         function loadOfflineState() {
             if (isOnline) return;
-            const raw = localStorage.getItem(OFFLINE_SAVE_KEY);
+            const raw = localStorage.getItem(STATE_KEY);
             if (!raw) return;
             try {
                 const st = JSON.parse(raw);
-                if (st && st.board) {
+                if (st && st.board && st.timeLeft) {
                     board = st.board;
-                    prevBoard = st.prevBoard;
-                    currentTurn = st.currentTurn;
+                    prevBoard = st.prevBoard || null;
+                    currentTurn = st.currentTurn || 1;
                     captures = st.captures || { 1: 0, 2: 0 };
-                    lastMove = st.lastMove;
+                    lastMove = st.lastMove || null;
                     passCount = st.passCount || 0;
-                    timeLeft = st.timeLeft || { 1: INITIAL_TIME_MS, 2: INITIAL_TIME_MS };
-                    lastTick = st.lastTick || Date.now();
+                    timeLeft = st.timeLeft;
+
+                    const elapsedSec = Math.floor((Date.now() - (st.lastTickTime || Date.now())) / 1000);
+                    if (elapsedSec > 0) {
+                        timeLeft[currentTurn] = Math.max(0, timeLeft[currentTurn] - elapsedSec);
+                    }
+                    lastTickTime = Date.now();
                 }
             } catch (e) {}
         }
 
-        if (!isOnline) {
-            loadOfflineState();
-            window.addEventListener('beforeunload', saveOfflineState);
+        function resetGame() {
+            localStorage.removeItem(STATE_KEY);
+            board = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(0));
+            prevBoard = null;
+            currentTurn = 1;
+            captures = { 1: 0, 2: 0 };
+            lastMove = null;
+            passCount = 0;
+            gameOver = false;
+            timeLeft = { 1: 300, 2: 300 };
+            lastTickTime = Date.now();
+            document.getElementById('endOverlay').classList.add('hidden');
+            updateUI();
+            drawBoard();
+            startTimerLoop();
         }
 
-        // --- ĐỒNG HỒ 5 PHÚT & ĐẾM NGƯỢC 30 GIÂY CUỐI ---
-        function formatClock(ms) {
-            const totalSec = Math.max(0, Math.ceil(ms / 1000));
-            if (totalSec <= 30 && totalSec > 0) {
-                return `⏳ Đếm ngược: ${totalSec}s`;
-            }
-            const m = Math.floor(totalSec / 60).toString().padStart(2, '0');
-            const s = (totalSec % 60).toString().padStart(2, '0');
-            return `${m}:${s}`;
+        function formatTime(sec) {
+            const s = Math.max(0, Math.ceil(sec));
+            const m = Math.floor(s / 60);
+            const r = s % 60;
+            return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
         }
 
-        function updateClockUI() {
-            const now = Date.now();
-            const elapsed = isGameOver ? 0 : (now - lastTick);
-            const bMs = currentTurn === 1 ? Math.max(0, timeLeft[1] - elapsed) : timeLeft[1];
-            const wMs = currentTurn === 2 ? Math.max(0, timeLeft[2] - elapsed) : timeLeft[2];
+        function updateTimerDisplay() {
+            const bEl = document.getElementById('blackTimeText');
+            const wEl = document.getElementById('whiteTimeText');
+            const bBox = document.getElementById('blackTimerBox');
+            const wBox = document.getElementById('whiteTimerBox');
 
-            const bEl = document.getElementById('blackClock');
-            const wEl = document.getElementById('whiteClock');
-            const bBox = document.getElementById('blackClockBox');
-            const wBox = document.getElementById('whiteClockBox');
+            const bSec = Math.max(0, Math.ceil(timeLeft[1]));
+            const wSec = Math.max(0, Math.ceil(timeLeft[2]));
 
-            bEl.innerText = formatClock(bMs);
-            wEl.innerText = formatClock(wMs);
+            bEl.innerText = bSec <= 30 && bSec > 0 ? `⏳ ${bSec}s` : formatTime(bSec);
+            wEl.innerText = wSec <= 30 && wSec > 0 ? `⏳ ${wSec}s` : formatTime(wSec);
 
-            bBox.className = 'clock-box' + (currentTurn === 1 ? ' clock-active' : '') + (bMs <= 30000 && bMs > 0 && currentTurn === 1 ? ' clock-danger' : '');
-            wBox.className = 'clock-box' + (currentTurn === 2 ? ' clock-active' : '') + (wMs <= 30000 && wMs > 0 && currentTurn === 2 ? ' clock-danger' : '');
+            bBox.classList.toggle('timer-active', currentTurn === 1 && !gameOver);
+            wBox.classList.toggle('timer-active', currentTurn === 2 && !gameOver);
 
-            // Kiểm tra hết giờ -> Bắt buộc gọi màn hình chiến thắng ngay lập tức!
-            if (!isGameOver) {
-                if (currentTurn === 1 && bMs <= 0) {
-                    timeLeft[1] = 0;
-                    if (!isOnline) {
-                        localStorage.removeItem(OFFLINE_SAVE_KEY);
-                        showEndScreen('QUÂN TRẮNG CHIẾN THẮNG!', 'Quân Đen đã hết 5 phút thời gian!', myColor !== 1);
-                    }
-                } else if (currentTurn === 2 && wMs <= 0) {
-                    timeLeft[2] = 0;
-                    if (!isOnline) {
-                        localStorage.removeItem(OFFLINE_SAVE_KEY);
-                        showEndScreen('QUÂN ĐEN CHIẾN THẮNG!', 'Quân Trắng đã hết 5 phút thời gian!', myColor !== 2);
+            bBox.classList.toggle('timer-danger', currentTurn === 1 && bSec <= 30 && !gameOver);
+            wBox.classList.toggle('timer-danger', currentTurn === 2 && wSec <= 30 && !gameOver);
+        }
+
+        function startTimerLoop() {
+            if (timerInterval) clearInterval(timerInterval);
+            lastTickTime = Date.now();
+
+            timerInterval = setInterval(() => {
+                if (gameOver) {
+                    clearInterval(timerInterval);
+                    return;
+                }
+
+                const now = Date.now();
+                const delta = (now - lastTickTime) / 1000;
+                lastTickTime = now;
+
+                timeLeft[currentTurn] = Math.max(0, timeLeft[currentTurn] - delta);
+                updateTimerDisplay();
+
+                if (!isOnline) saveOfflineState();
+
+                if (timeLeft[currentTurn] <= 0) {
+                    timeLeft[currentTurn] = 0;
+                    updateTimerDisplay();
+                    clearInterval(timerInterval);
+
+                    if (isOnline) {
+                        socket.emit('claimTimeout', { roomId });
+                    } else {
+                        const loserName = currentTurn === 1 ? 'Quân Đen' : 'Quân Trắng';
+                        const winnerTitle = currentTurn === 1 ? 'QUÂN TRẮNG CHIẾN THẮNG!' : 'QUÂN ĐEN CHIẾN THẮNG!';
+                        showEndScreen(winnerTitle, `${loserName} đã hết tổng thời gian 5 phút!`, true);
                     }
                 }
-            }
+            }, 250);
         }
 
-        setInterval(updateClockUI, 200);
-
-        // --- VẼ BÀN CỜ GỖ 9x9 & QUÂN CỜ ---
+        // --- TẢI VÂN GỖ WOOD.PNG & TỰ VẼ BÀN CỜ 9x9 ---
         const woodImg = new Image();
         let woodLoaded = false;
         woodImg.onload = () => { woodLoaded = true; drawBoard(); };
         woodImg.src = '/wood.png';
 
-        const COLS_LABEL = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
-        const HOSHI = [[1, 1], [7, 1], [4, 4], [1, 7], [7, 7]];
+        const MARGIN = 115;
+        const BOARD_PX = canvas.width - MARGIN * 2;
+        const STEP = BOARD_PX / (GRID_SIZE - 1);
+        const STONE_RADIUS = STEP * 0.44;
+        let hoverPoint = null;
 
-        function drawBoard() {
-            const W = canvas.width;
-            const H = canvas.height;
-            const step = (W - MARGIN * 2) / (GRID_SIZE - 1);
-            const stoneRadius = step * 0.44;
-
-            ctx.clearRect(0, 0, W, H);
-            if (woodLoaded) {
-                ctx.drawImage(woodImg, 0, 0, W, H);
-            } else {
-                ctx.fillStyle = '#d4a359';
-                ctx.fillRect(0, 0, W, H);
-            }
-
-            // Viền khung ngoài bàn cờ
-            ctx.strokeStyle = '#2b1b0e';
-            ctx.lineWidth = 4;
-            ctx.strokeRect(MARGIN - step * 0.55, MARGIN - step * 0.55, (GRID_SIZE - 1) * step + step * 1.1, (GRID_SIZE - 1) * step + step * 1.1);
-
-            // Lưới 9x9
-            ctx.strokeStyle = '#1e140a';
-            ctx.lineWidth = 2.4;
-            for (let i = 0; i < GRID_SIZE; i++) {
-                const pos = MARGIN + i * step;
-                ctx.beginPath();
-                ctx.moveTo(pos, MARGIN);
-                ctx.lineTo(pos, H - MARGIN);
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.moveTo(MARGIN, pos);
-                ctx.lineTo(W - MARGIN, pos);
-                ctx.stroke();
-            }
-
-            // 5 điểm sao Hoshi
-            ctx.fillStyle = '#1e140a';
-            for (const [hc, hr] of HOSHI) {
-                ctx.beginPath();
-                ctx.arc(MARGIN + hc * step, MARGIN + hr * step, 6.5, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-            // Tọa độ A-I, 1-9
-            ctx.fillStyle = '#2b1b0e';
-            ctx.font = 'bold 20px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            for (let i = 0; i < GRID_SIZE; i++) {
-                const pos = MARGIN + i * step;
-                ctx.fillText(COLS_LABEL[i], pos, MARGIN - step * 0.78);
-                ctx.fillText(COLS_LABEL[i], pos, H - MARGIN + step * 0.78);
-                const rowNum = String(GRID_SIZE - i);
-                ctx.fillText(rowNum, MARGIN - step * 0.78, pos);
-                ctx.fillText(rowNum, W - MARGIN + step * 0.78, pos);
-            }
-
-            // Bóng mờ xem trước
-            if (!isGameOver && hoverPoint && board[hoverPoint.col][hoverPoint.row] === 0) {
-                drawStone(MARGIN + hoverPoint.col * step, MARGIN + hoverPoint.row * step, stoneRadius, currentTurn, true);
-            }
-
-            // Quân cờ đã đặt
-            for (let c = 0; c < GRID_SIZE; c++) {
-                for (let r = 0; r < GRID_SIZE; r++) {
-                    const stone = board[c][r];
-                    if (stone !== 0) {
-                        const cx = MARGIN + c * step;
-                        const cy = MARGIN + r * step;
-                        drawStone(cx, cy, stoneRadius, stone, false);
-                        if (lastMove && lastMove.col === c && lastMove.row === r) {
-                            ctx.beginPath();
-                            ctx.arc(cx, cy, stoneRadius * 0.24, 0, Math.PI * 2);
-                            ctx.fillStyle = '#e74c3c';
-                            ctx.fill();
-                        }
-                    }
-                }
-            }
+        function getCoord(col, row) {
+            return { x: MARGIN + col * STEP, y: MARGIN + row * STEP };
         }
 
-        function drawStone(x, y, radius, color, isGhost) {
+        function drawStone(x, y, color, isGhost = false) {
             ctx.save();
             ctx.beginPath();
-            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.arc(x, y, STONE_RADIUS, 0, Math.PI * 2);
+
             if (isGhost) {
-                ctx.fillStyle = color === 1 ? 'rgba(20, 20, 20, 0.38)' : 'rgba(255, 255, 255, 0.5)';
+                ctx.fillStyle = color === 1 ? 'rgba(20, 20, 20, 0.42)' : 'rgba(248, 248, 248, 0.55)';
                 ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+                ctx.stroke();
             } else {
-                ctx.shadowColor = 'rgba(0,0,0,0.55)';
-                ctx.shadowBlur = radius * 0.25;
-                ctx.shadowOffsetX = radius * 0.1;
-                ctx.shadowOffsetY = radius * 0.14;
-                const grad = ctx.createRadialGradient(x - radius * 0.3, y - radius * 0.3, radius * 0.1, x, y, radius);
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+                ctx.shadowBlur = 10;
+                ctx.shadowOffsetX = 4;
+                ctx.shadowOffsetY = 5;
+
+                const grad = ctx.createRadialGradient(
+                    x - STONE_RADIUS * 0.3, y - STONE_RADIUS * 0.3, STONE_RADIUS * 0.1,
+                    x, y, STONE_RADIUS
+                );
                 if (color === 1) {
-                    grad.addColorStop(0, '#555');
-                    grad.addColorStop(0.35, '#1b1b1b');
+                    grad.addColorStop(0, '#5a5a5a');
+                    grad.addColorStop(0.3, '#1e1e1e');
                     grad.addColorStop(1, '#050505');
                 } else {
-                    grad.addColorStop(0, '#fff');
+                    grad.addColorStop(0, '#ffffff');
                     grad.addColorStop(0.75, '#eaeaea');
                     grad.addColorStop(1, '#bdbdbd');
                 }
@@ -420,6 +463,132 @@
             }
             ctx.restore();
         }
+
+        function drawBoard() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (woodLoaded) {
+                ctx.drawImage(woodImg, 0, 0, canvas.width, canvas.height);
+            } else {
+                ctx.fillStyle = '#d4a36a';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            ctx.strokeStyle = '#1e160d';
+            ctx.lineWidth = 4.5;
+            ctx.strokeRect(MARGIN - 8, MARGIN - 8, BOARD_PX + 16, BOARD_PX + 16);
+
+            ctx.lineWidth = 2.2;
+            for (let i = 0; i < GRID_SIZE; i++) {
+                const pos = MARGIN + i * STEP;
+                ctx.beginPath();
+                ctx.moveTo(pos, MARGIN);
+                ctx.lineTo(pos, MARGIN + BOARD_PX);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(MARGIN, pos);
+                ctx.lineTo(MARGIN + BOARD_PX, pos);
+                ctx.stroke();
+            }
+
+            const starPoints = [[2, 2], [6, 2], [4, 4], [2, 6], [6, 6]];
+            ctx.fillStyle = '#1e160d';
+            for (const [sc, sr] of starPoints) {
+                const pt = getCoord(sc, sr);
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 6.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.fillStyle = '#24180b';
+            ctx.font = 'bold 21px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            for (let i = 0; i < GRID_SIZE; i++) {
+                const pos = MARGIN + i * STEP;
+                ctx.fillText(COLS_LABEL[i], pos, MARGIN - 54);
+                ctx.fillText(COLS_LABEL[i], pos, MARGIN + BOARD_PX + 54);
+                const rowNum = String(GRID_SIZE - i);
+                ctx.fillText(rowNum, MARGIN - 54, pos);
+                ctx.fillText(rowNum, MARGIN + BOARD_PX + 54, pos);
+            }
+
+            if (!gameOver && hoverPoint && board[hoverPoint.col][hoverPoint.row] === 0) {
+                const pt = getCoord(hoverPoint.col, hoverPoint.row);
+                drawStone(pt.x, pt.y, currentTurn, true);
+            }
+
+            for (let c = 0; c < GRID_SIZE; c++) {
+                for (let r = 0; r < GRID_SIZE; r++) {
+                    const stone = board[c][r];
+                    if (stone !== 0) {
+                        const pt = getCoord(c, r);
+                        drawStone(pt.x, pt.y, stone, false);
+
+                        if (lastMove && lastMove.col === c && lastMove.row === r) {
+                            ctx.beginPath();
+                            ctx.arc(pt.x, pt.y, STONE_RADIUS * 0.24, 0, Math.PI * 2);
+                            ctx.fillStyle = '#e74c3c';
+                            ctx.fill();
+                        }
+                    }
+                }
+            }
+        }
+
+        function getNearestIntersection(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            const x = (clientX - rect.left) * (canvas.width / rect.width);
+            const y = (clientY - rect.top) * (canvas.height / rect.height);
+
+            if (x < MARGIN - STEP * 0.75 || x > MARGIN + BOARD_PX + STEP * 0.75 ||
+                y < MARGIN - STEP * 0.75 || y > MARGIN + BOARD_PX + STEP * 0.75) {
+                return null;
+            }
+
+            const col = Math.max(0, Math.min(GRID_SIZE - 1, Math.round((x - MARGIN) / STEP)));
+            const row = Math.max(0, Math.min(GRID_SIZE - 1, Math.round((y - MARGIN) / STEP)));
+            return { col, row };
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (gameOver || (isOnline && currentTurn !== myColor)) {
+                hoverPoint = null;
+                return;
+            }
+            const nearest = getNearestIntersection(e.clientX, e.clientY);
+            if (JSON.stringify(nearest) !== JSON.stringify(hoverPoint)) {
+                hoverPoint = nearest;
+                drawBoard();
+            }
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            hoverPoint = null;
+            drawBoard();
+        });
+
+        canvas.addEventListener('click', (e) => {
+            if (gameOver) return;
+            unlockAudio();
+            if (isOnline && currentTurn !== myColor) return;
+            const nearest = getNearestIntersection(e.clientX, e.clientY);
+            if (!nearest) return;
+
+            if (isOnline) {
+                socket.emit('playMove', { roomId, col: nearest.col, row: nearest.row, username });
+            } else {
+                const res = executeMove(nearest.col, nearest.row, currentTurn);
+                if (!res.ok) return alert(res.msg);
+                playStoneSound();
+                hoverPoint = null;
+                saveOfflineState();
+                updateUI();
+                drawBoard();
+                checkNoValidMovesAfterTurn();
+            }
+        });
 
         // --- LUẬT CỜ VÂY CHUẨN & KIỂM TRA HẾT NƯỚC ĐI ---
         const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -451,9 +620,9 @@
             return { group, liberties: liberties.size };
         }
 
-        function simulateMove(targetBoard, targetPrevBoard, col, row, color) {
-            if (targetBoard[col][row] !== 0) return { ok: false, msg: 'Giao điểm này đã có quân!' };
-            const nextBoard = cloneBoard(targetBoard);
+        function simulateMove(srcBoard, srcPrevBoard, col, row, color) {
+            if (srcBoard[col][row] !== 0) return { ok: false, msg: 'Giao điểm này đã có quân!' };
+            const nextBoard = cloneBoard(srcBoard);
             nextBoard[col][row] = color;
             const enemy = color === 1 ? 2 : 1;
             let capturedCount = 0;
@@ -470,45 +639,43 @@
             }
 
             const selfGroup = getGroupAndLiberties(nextBoard, col, row);
-            if (capturedCount === 0 && selfGroup.liberties === 0) return { ok: false, msg: 'Phạm luật: Nước đi tự sát!' };
-            if (isSameBoard(nextBoard, targetPrevBoard)) return { ok: false, msg: 'Phạm luật Cướp cờ (Ko)!' };
+            if (capturedCount === 0 && selfGroup.liberties === 0) return { ok: false, msg: 'Phạm luật: Điểm tự sát!' };
+            if (isSameBoard(nextBoard, srcPrevBoard)) return { ok: false, msg: 'Phạm luật Cướp cờ (Ko)!' };
 
             return { ok: true, nextBoard, capturedCount };
         }
 
-        function hasAnyLegalMove(targetBoard, targetPrevBoard, color) {
+        function hasAnyValidMove(color) {
             for (let c = 0; c < GRID_SIZE; c++) {
                 for (let r = 0; r < GRID_SIZE; r++) {
-                    if (targetBoard[c][r] === 0) {
-                        if (simulateMove(targetBoard, targetPrevBoard, c, r, color).ok) return true;
+                    if (board[c][r] === 0) {
+                        if (simulateMove(board, prevBoard, c, r, color).ok) return true;
                     }
                 }
             }
             return false;
         }
 
-        function executeOfflineMove(col, row, color) {
-            const now = Date.now();
-            timeLeft[color] = Math.max(0, timeLeft[color] - (now - lastTick));
-            lastTick = now;
-
-            if (timeLeft[color] <= 0) {
-                localStorage.removeItem(OFFLINE_SAVE_KEY);
-                showEndScreen(color === 1 ? 'QUÂN TRẮNG CHIẾN THẮNG!' : 'QUÂN ĐEN CHIẾN THẮNG!', 'Đã hết 5 phút thời gian!', false);
-                return { ok: false };
+        function checkNoValidMovesAfterTurn() {
+            if (gameOver) return;
+            if (!hasAnyValidMove(currentTurn)) {
+                const loserName = currentTurn === 1 ? 'Quân Đen' : 'Quân Trắng';
+                const winnerTitle = currentTurn === 1 ? 'QUÂN TRẮNG CHIẾN THẮNG!' : 'QUÂN ĐEN CHIẾN THẮNG!';
+                showEndScreen(winnerTitle, `${loserName} hết nước đi hợp lệ (toàn bộ ô trống đều là điểm tự sát)!`, true);
             }
+        }
 
-            const res = simulateMove(board, prevBoard, col, row, color);
-            if (!res.ok) return res;
+        function executeMove(col, row, color) {
+            const sim = simulateMove(board, prevBoard, col, row, color);
+            if (!sim.ok) return sim;
 
-            const enemy = color === 1 ? 2 : 1;
             prevBoard = cloneBoard(board);
-            board = res.nextBoard;
-            captures[color] += res.capturedCount;
+            board = sim.nextBoard;
+            captures[color] += sim.capturedCount;
             lastMove = { col, row };
-            currentTurn = enemy;
+            currentTurn = color === 1 ? 2 : 1;
             passCount = 0;
-            saveOfflineState();
+            lastTickTime = Date.now();
             return { ok: true };
         }
 
@@ -555,107 +722,45 @@
         function updateUI() {
             document.getElementById('blackCap').innerText = captures[1];
             document.getElementById('whiteCap').innerText = captures[2];
-            updateClockUI();
+            updateTimerDisplay();
         }
-
-        // --- BẮT TỌA ĐỘ CHUỘT (MỞ RỘNG RA CẢ 4 VIỀN NGOÀI) ---
-        function getGridCoord(clientX, clientY) {
-            const rect = canvas.getBoundingClientRect();
-            const x = (clientX - rect.left) * (canvas.width / rect.width);
-            const y = (clientY - rect.top) * (canvas.height / rect.height);
-            const step = (canvas.width - MARGIN * 2) / (GRID_SIZE - 1);
-
-            const col = Math.round((x - MARGIN) / step);
-            const row = Math.round((y - MARGIN) / step);
-            if (col < 0 || col >= GRID_SIZE || row < 0 || row >= GRID_SIZE) return null;
-
-            const dist = Math.hypot(x - (MARGIN + col * step), y - (MARGIN + row * step));
-            return dist <= step * 0.75 ? { col, row } : null;
-        }
-
-        canvas.addEventListener('mousemove', (e) => {
-            if (isGameOver || (isOnline && currentTurn !== myColor)) {
-                hoverPoint = null;
-                return;
-            }
-            const pt = getGridCoord(e.clientX, e.clientY);
-            if (JSON.stringify(pt) !== JSON.stringify(hoverPoint)) {
-                hoverPoint = pt;
-                drawBoard();
-            }
-        });
-
-        canvas.addEventListener('mouseleave', () => {
-            hoverPoint = null;
-            drawBoard();
-        });
-
-        canvas.addEventListener('click', (e) => {
-            if (isGameOver || (isOnline && currentTurn !== myColor)) return;
-            const pt = getGridCoord(e.clientX, e.clientY);
-            if (!pt) return;
-
-            if (isOnline) {
-                socket.emit('playMove', { roomId, col: pt.col, row: pt.row, username });
-            } else {
-                const res = executeOfflineMove(pt.col, pt.row, currentTurn);
-                if (!res.ok) {
-                    if (res.msg) alert(res.msg);
-                    return;
-                }
-                playStoneSound();
-                hoverPoint = null;
-                updateUI();
-                drawBoard();
-
-                // Kiểm tra bên tiếp theo còn nước đi hợp lệ nào không
-                if (!hasAnyLegalMove(board, prevBoard, currentTurn)) {
-                    localStorage.removeItem(OFFLINE_SAVE_KEY);
-                    const winnerText = currentTurn === 1 ? 'QUÂN TRẮNG CHIẾN THẮNG!' : 'QUÂN ĐEN CHIẾN THẮNG!';
-                    const loserText = currentTurn === 1 ? 'Quân Đen' : 'Quân Trắng';
-                    showEndScreen(winnerText, `${loserText} không còn nước đi hợp lệ nào trên bàn cờ!`, true);
-                }
-            }
-        });
 
         function handlePass() {
-            if (isGameOver) return;
+            if (gameOver) return;
             if (isOnline) {
                 if (currentTurn === myColor) socket.emit('passTurn', { roomId, username });
             } else {
-                const now = Date.now();
-                timeLeft[currentTurn] = Math.max(0, timeLeft[currentTurn] - (now - lastTick));
-                lastTick = now;
-
                 passCount++;
                 if (passCount >= 2) {
-                    localStorage.removeItem(OFFLINE_SAVE_KEY);
                     const res = calculateTerritoryScore();
-                    const winText = res.blackTotal > res.whiteTotal ? 'QUÂN ĐEN CHIẾN THẮNG!' : 'QUÂN TRẮNG CHIẾN THẮNG!';
-                    showEndScreen(winText, `Đất + Tù binh — Đen: ${res.blackTotal} | Trắng: ${res.whiteTotal} (gồm 6.5 Komi)`, true);
+                    const winText = res.blackTotal > res.whiteTotal ? 'QUÂN ĐEN THẮNG!' : 'QUÂN TRẮNG THẮNG!';
+                    showEndScreen(winText, `Hai bên bỏ lượt — Đen: ${res.blackTotal} | Trắng: ${res.whiteTotal} (gồm 6.5 Komi)`, true);
                 } else {
-                    alert(`${currentTurn === 1 ? 'Quân Đen' : 'Quân Trắng'} đã bỏ lượt!`);
+                    alert(`${currentTurn === 1 ? 'Đen' : 'Trắng'} đã bỏ lượt!`);
                     currentTurn = currentTurn === 1 ? 2 : 1;
+                    lastTickTime = Date.now();
                     saveOfflineState();
                     updateUI();
                     drawBoard();
+                    checkNoValidMovesAfterTurn();
                 }
             }
         }
 
         function handleResign() {
-            if (isGameOver || !confirm('Bạn chắc chắn muốn đầu hàng?')) return;
-            if (isOnline) {
-                socket.emit('resignGame', { roomId, username });
-            } else {
-                localStorage.removeItem(OFFLINE_SAVE_KEY);
-                showEndScreen(currentTurn === 1 ? 'QUÂN TRẮNG CHIẾN THẮNG!' : 'QUÂN ĐEN CHIẾN THẮNG!', 'Đã đầu hàng', false);
-            }
+            if (gameOver) return;
+            if (!confirm('Bạn chắc chắn muốn đầu hàng?')) return;
+            if (isOnline) socket.emit('resignGame', { roomId, username });
+            else showEndScreen(currentTurn === 1 ? 'QUÂN TRẮNG THẮNG!' : 'QUÂN ĐEN THẮNG!', 'Đã đầu hàng', false);
         }
 
         function showEndScreen(titleText, reasonText, isWin) {
-            if (isGameOver) return;
-            isGameOver = true;
+            if (gameOver) return;
+            gameOver = true;
+            localStorage.removeItem(STATE_KEY);
+            if (timerInterval) clearInterval(timerInterval);
+            updateTimerDisplay();
+
             const titleEl = document.getElementById('endTitle');
             titleEl.innerText = titleText;
             titleEl.style.color = isWin ? '#2ecc71' : '#e74c3c';
@@ -664,33 +769,32 @@
         }
 
         function exitMatch() {
-            localStorage.removeItem(OFFLINE_SAVE_KEY);
-            sessionStorage.removeItem('go_roomId');
-            window.location.href = '/index1.html';
+            localStorage.removeItem(STATE_KEY);
+            if (isOnline) {
+                sessionStorage.removeItem('go_roomId');
+                window.location.href = '/index1.html';
+            } else {
+                resetGame();
+            }
         }
 
-        // --- ĐỒNG BỘ ONLINE VỚI SERVER ---
+        // --- ĐỒNG BỘ ONLINE VỚI SERVER.JS ---
         if (isOnline) {
             socket.emit('joinGameRoom', { roomId, username });
 
             socket.on('syncBoard', (game) => {
-                if (game.lastMove && (!lastMove || game.lastMove.col !== lastMove.col || game.lastMove.row !== lastMove.row)) {
-                    playStoneSound();
-                }
+                const hadMove = game.lastMove && (!lastMove || game.lastMove.col !== lastMove.col || game.lastMove.row !== lastMove.row);
                 board = game.board;
                 currentTurn = game.turn;
                 if (game.captures) captures = game.captures;
                 if (game.lastMove) lastMove = game.lastMove;
-                if (typeof game.blackTimeMs === 'number') timeLeft[1] = game.blackTimeMs;
-                if (typeof game.whiteTimeMs === 'number') timeLeft[2] = game.whiteTimeMs;
-                lastTick = Date.now();
+                if (game.timeLeft) {
+                    timeLeft = { ...game.timeLeft };
+                    lastTickTime = Date.now();
+                }
+                if (hadMove) playStoneSound();
                 updateUI();
                 drawBoard();
-            });
-
-            socket.on('gameNotFound', () => {
-                alert('Trận đấu đã kết thúc hoặc không còn tồn tại!');
-                exitMatch();
             });
 
             socket.on('invalidMove', (msg) => alert(msg));
@@ -699,12 +803,20 @@
                 const isWin = winner === username;
                 showEndScreen(isWin ? 'CHIẾN THẮNG! (+1 ĐIỂM)' : 'THẤT BẠI!', reason, isWin);
                 if (isWin) sessionStorage.setItem('go_score', winnerNewScore);
-                setTimeout(exitMatch, 4000);
+                setTimeout(exitMatch, 3500);
             });
+        } else {
+            loadOfflineState();
+            updateUI();
+            drawBoard();
+            if (timeLeft[currentTurn] <= 0) {
+                const loserName = currentTurn === 1 ? 'Quân Đen' : 'Quân Trắng';
+                const winnerTitle = currentTurn === 1 ? 'QUÂN TRẮNG CHIẾN THẮNG!' : 'QUÂN ĐEN CHIẾN THẮNG!';
+                showEndScreen(winnerTitle, `${loserName} đã hết tổng thời gian 5 phút!`, true);
+            } else {
+                startTimerLoop();
+            }
         }
-
-        updateUI();
-        drawBoard();
     </script>
 </body>
 </html>

@@ -5,103 +5,125 @@
     <title>Cài Đặt Game Cờ Vây</title>
     <style>
         body {
-            background: #22222c;
+            background: #1e1e26;
             color: #fff;
             font-family: Arial, sans-serif;
             margin: 0;
-            padding: 16px;
+            padding: 14px;
             box-sizing: border-box;
         }
-        h3 { margin: 0 0 14px 0; color: #f5b041; font-size: 18px; border-bottom: 1px solid #3a3a4a; padding-bottom: 8px; }
         .section {
-            background: #181820;
-            padding: 12px 14px;
+            background: #2b2b36;
+            padding: 12px;
             border-radius: 8px;
             margin-bottom: 12px;
-            border: 1px solid #2e2e3d;
+            border: 1px solid #3a3a4a;
         }
-        .section-title { font-weight: bold; font-size: 14px; color: #f5b041; margin-bottom: 8px; }
-        .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 8px 0; font-size: 13px; }
-        input[type="range"] { width: 170px; accent-color: #f5b041; cursor: pointer; }
-        input[type="file"] { font-size: 12px; color: #ccc; max-width: 210px; }
+        .section h3 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            color: #5dade2;
+        }
+        .row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-top: 6px;
+            font-size: 13px;
+        }
+        input[type="range"] {
+            flex: 1;
+            accent-color: #f5b041;
+            cursor: pointer;
+        }
+        input[type="file"] {
+            font-size: 12px;
+            color: #ccc;
+            max-width: 195px;
+        }
         button {
-            padding: 6px 12px;
+            padding: 5px 10px;
             border: none;
             border-radius: 5px;
             font-weight: bold;
             cursor: pointer;
             font-size: 12px;
-            background: #4a4a5e;
-            color: #fff;
         }
-        button:hover { opacity: 0.85; }
-        .btn-danger { background: #e74c3c; }
+        .btn-clear { background: #e74c3c; color: #fff; }
+        .status-text { font-size: 12px; color: #2ecc71; margin-top: 5px; }
     </style>
 </head>
 <body>
-    <h3>⚙️ Cài Đặt Trò Chơi</h3>
 
-    <!-- 1. ÂM LƯỢNG HIỆU ỨNG -->
     <div class="section">
-        <div class="section-title">🔊 1. Âm Lượng Hiệu Ứng Đặt Quân</div>
+        <h3>🔊 1. Âm Lượng Hiệu Ứng Đặt Quân</h3>
         <div class="row">
-            <span>Âm lượng: <b id="sfxText">80%</b></span>
-            <input type="range" id="sfxRange" min="0" max="100" value="80" oninput="updateAudio()">
+            <span>Âm lượng: <strong id="sfxLabel">100%</strong></span>
+            <input type="range" id="sfxRange" min="0" max="100" value="100" oninput="updateSfx(this.value)">
         </div>
     </div>
 
-    <!-- 2. NHẠC NỀN GAME -->
     <div class="section">
-        <div class="section-title">🎵 2. Nhạc Nền Game (Tự Chọn File)</div>
+        <h3>🎵 2. Nhạc Nền Game (Tự Chọn File)</h3>
         <div class="row">
             <input type="file" id="bgmFile" accept="audio/*" onchange="uploadBgm(this)">
-            <button class="btn-danger" onclick="clearBgm()">Xóa nhạc</button>
+            <button class="btn-clear" onclick="clearBgm()">Xóa nhạc</button>
         </div>
-        <div id="bgmStatus" style="font-size: 12px; color: #2ecc71; margin-bottom: 6px;"></div>
-        <div class="row">
-            <span>Âm lượng nhạc nền: <b id="bgmText">40%</b></span>
-            <input type="range" id="bgmRange" min="0" max="100" value="40" oninput="updateAudio()">
+        <div class="row" style="margin-top: 10px;">
+            <span>Âm lượng nhạc nền: <strong id="bgmLabel">50%</strong></span>
+            <input type="range" id="bgmRange" min="0" max="100" value="50" oninput="updateBgmVol(this.value)">
         </div>
+        <div class="status-text" id="bgmStatus"></div>
     </div>
 
-    <!-- 3. HÌNH NỀN BACKGROUND -->
     <div class="section">
-        <div class="section-title">🖼️ 3. Hình Nền (Background Bên Ngoài)</div>
+        <h3>🖼️ 3. Hình Nền (Background Bên Ngoài)</h3>
         <div class="row">
             <input type="file" id="bgFile" accept="image/*" onchange="uploadBg(this)">
-            <button class="btn-danger" onclick="clearBg()">Mặc định</button>
+            <button class="btn-clear" onclick="clearBg()">Mặc định</button>
         </div>
-        <div id="bgStatus" style="font-size: 12px; color: #2ecc71;"></div>
+        <div class="status-text" id="bgStatus"></div>
     </div>
 
     <script>
         function notifyParent() {
-            if (window.parent) window.parent.postMessage('settingsUpdated', '*');
-        }
-
-        function loadSaved() {
-            const sfx = Math.round((Number(localStorage.getItem('go_sfxVol') ?? 0.8)) * 100);
-            const bgm = Math.round((Number(localStorage.getItem('go_bgmVol') ?? 0.4)) * 100);
-            document.getElementById('sfxRange').value = sfx;
-            document.getElementById('sfxText').innerText = sfx + '%';
-            document.getElementById('bgmRange').value = bgm;
-            document.getElementById('bgmText').innerText = bgm + '%';
-
-            if (localStorage.getItem('go_bgmName')) {
-                document.getElementById('bgmStatus').innerText = 'Đang dùng: ' + localStorage.getItem('go_bgmName');
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage('settingsUpdated', '*');
             }
-            if (localStorage.getItem('go_bgImgData')) {
-                document.getElementById('bgStatus').innerText = '✅ Đã áp dụng ảnh nền tùy chỉnh';
+            if (window.opener && !window.opener.closed) {
+                window.opener.postMessage('settingsUpdated', '*');
             }
         }
 
-        function updateAudio() {
-            const sfx = document.getElementById('sfxRange').value;
-            const bgm = document.getElementById('bgmRange').value;
-            document.getElementById('sfxText').innerText = sfx + '%';
-            document.getElementById('bgmText').innerText = bgm + '%';
-            localStorage.setItem('go_sfxVol', sfx / 100);
-            localStorage.setItem('go_bgmVol', bgm / 100);
+        const savedSfx = localStorage.getItem('go_sfx_vol');
+        if (savedSfx !== null) {
+            document.getElementById('sfxRange').value = savedSfx;
+            document.getElementById('sfxLabel').innerText = savedSfx + '%';
+        }
+
+        const savedBgmVol = localStorage.getItem('go_bgm_vol');
+        if (savedBgmVol !== null) {
+            document.getElementById('bgmRange').value = savedBgmVol;
+            document.getElementById('bgmLabel').innerText = savedBgmVol + '%';
+        }
+
+        if (localStorage.getItem('go_bgm_data')) {
+            document.getElementById('bgmStatus').innerText = '✅ Đang dùng file nhạc nền tùy chỉnh';
+        }
+        if (localStorage.getItem('go_custom_bg')) {
+            document.getElementById('bgStatus').innerText = '✅ Đã áp dụng ảnh nền tùy chỉnh';
+        }
+
+        function updateSfx(val) {
+            document.getElementById('sfxLabel').innerText = val + '%';
+            localStorage.setItem('go_sfx_vol', val);
+            notifyParent();
+        }
+
+        function updateBgmVol(val) {
+            document.getElementById('bgmLabel').innerText = val + '%';
+            localStorage.setItem('go_bgm_vol', val);
             notifyParent();
         }
 
@@ -109,23 +131,26 @@
             const file = input.files[0];
             if (!file) return;
             if (file.size > 4.5 * 1024 * 1024) {
-                alert('File nhạc hơi lớn (>4.5MB), hãy chọn file nhẹ hơn để lưu mượt trên trình duyệt!');
+                alert('File nhạc hơi lớn (> 4.5MB), hãy chọn file ngắn/nhẹ hơn để trình duyệt lưu mượt nhé!');
                 return;
             }
             const reader = new FileReader();
-            reader.onload = (e) => {
-                localStorage.setItem('go_bgmData', e.target.result);
-                localStorage.setItem('go_bgmName', file.name);
-                document.getElementById('bgmStatus').innerText = 'Đang dùng: ' + file.name;
-                notifyParent();
+            reader.onload = () => {
+                try {
+                    localStorage.setItem('go_bgm_data', reader.result);
+                    document.getElementById('bgmStatus').innerText = '✅ Đã bật nhạc nền: ' + file.name;
+                    notifyParent();
+                } catch (e) {
+                    alert('Bộ nhớ trình duyệt đầy, vui lòng chọn file nhạc dung lượng nhỏ hơn!');
+                }
             };
             reader.readAsDataURL(file);
         }
 
         function clearBgm() {
-            localStorage.removeItem('go_bgmData');
-            localStorage.removeItem('go_bgmName');
-            document.getElementById('bgmStatus').innerText = 'Đã tắt nhạc nền';
+            localStorage.removeItem('go_bgm_data');
+            document.getElementById('bgmFile').value = '';
+            document.getElementById('bgmStatus').innerText = 'Đã tắt nhạc nền tùy chỉnh';
             notifyParent();
         }
 
@@ -133,21 +158,24 @@
             const file = input.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = (e) => {
-                localStorage.setItem('go_bgImgData', e.target.result);
-                document.getElementById('bgStatus').innerText = '✅ Đã áp dụng ảnh nền tùy chỉnh';
-                notifyParent();
+            reader.onload = () => {
+                try {
+                    localStorage.setItem('go_custom_bg', reader.result);
+                    document.getElementById('bgStatus').innerText = '✅ Đã áp dụng ảnh nền tùy chỉnh';
+                    notifyParent();
+                } catch (e) {
+                    alert('Ảnh nền dung lượng quá lớn, hãy chọn ảnh nhẹ hơn (< 4MB)!');
+                }
             };
             reader.readAsDataURL(file);
         }
 
         function clearBg() {
-            localStorage.removeItem('go_bgImgData');
-            document.getElementById('bgStatus').innerText = 'Đã trả về nền mặc định';
+            localStorage.removeItem('go_custom_bg');
+            document.getElementById('bgFile').value = '';
+            document.getElementById('bgStatus').innerText = 'Đã khôi phục nền mặc định';
             notifyParent();
         }
-
-        loadSaved();
     </script>
 </body>
 </html>
