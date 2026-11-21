@@ -6,7 +6,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Đọc trực tiếp các file HTML và ảnh đang nằm ở thư mục gốc trên GitHub
+// Đọc trực tiếp các file HTML và ảnh đang nằm ở thư mục gốc
 app.use(express.static(__dirname, { index: 'index1.html' }));
 
 const users = {};
@@ -20,7 +20,8 @@ function broadcastOnlineList() {
             list.push({
                 socketId,
                 username: info.username,
-                score: users[info.username].score
+                score: users[info.username].score,
+                isFocused: info.isFocused
             });
         }
     }
@@ -112,13 +113,14 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Giữ trạng thái online suốt khi mở web (kể cả khi chuyển cửa sổ test)
     socket.on('setTabActive', ({ username, active }) => {
         if (!username || !users[username]) return;
-        if (active) {
-            onlinePlayers[socket.id] = { username, inGame: false };
-        } else {
-            delete onlinePlayers[socket.id];
-        }
+        onlinePlayers[socket.id] = {
+            username,
+            inGame: onlinePlayers[socket.id]?.inGame || false,
+            isFocused: active
+        };
         broadcastOnlineList();
     });
 
@@ -148,7 +150,7 @@ io.on('connection', (socket) => {
             passCount: 0
         };
 
-        if (onlinePlayers[fromSocketId]) onlinePlayers[fromSocketId].inGame = true;
+        onlinePlayers[fromSocketId].inGame = true;
         if (onlinePlayers[socket.id]) onlinePlayers[socket.id].inGame = true;
         broadcastOnlineList();
 
