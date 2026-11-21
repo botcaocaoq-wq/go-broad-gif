@@ -8,7 +8,6 @@
             background-color: #18181f;
             background-size: cover;
             background-position: center;
-            background-repeat: no-repeat;
             background-attachment: fixed;
             color: #fff;
             font-family: Arial, sans-serif;
@@ -27,25 +26,32 @@
             justify-content: center;
             background: rgba(35, 35, 46, 0.92);
             padding: 8px 16px;
-            border-radius: 10px;
+            border-radius: 8px;
             margin-bottom: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.6);
             backdrop-filter: blur(4px);
         }
-        .stat-box { background: #14141b; padding: 6px 12px; border-radius: 6px; font-size: 14px; }
-        .timer-box {
-            background: #14141b;
-            padding: 6px 12px;
+        .stat-box { background: #14141b; padding: 6px 12px; border-radius: 6px; font-size: 14px; border: 1px solid #333; }
+        .clock-box {
+            padding: 6px 14px;
             border-radius: 6px;
-            font-size: 14px;
+            font-size: 15px;
             font-weight: bold;
-            border: 1px solid #3a3a4a;
+            background: #14141b;
+            border: 2px solid #333;
             transition: 0.2s;
         }
-        .timer-active { border-color: #f5b041; color: #f5b041; }
-        .timer-danger { background: #c0392b !important; border-color: #ff7675 !important; color: #fff !important; animation: pulse 0.8s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
-
+        .clock-active { border-color: #f5b041; color: #f5b041; box-shadow: 0 0 10px rgba(245,176,65,0.35); }
+        .clock-danger {
+            border-color: #e74c3c !important;
+            background: #5c1916 !important;
+            color: #fff !important;
+            animation: pulseRed 0.7s infinite alternate;
+        }
+        @keyframes pulseRed {
+            from { transform: scale(1); }
+            to { transform: scale(1.05); }
+        }
         canvas {
             box-shadow: 0 12px 35px rgba(0,0,0,0.85);
             cursor: pointer;
@@ -53,17 +59,13 @@
             max-height: 78vh;
             border-radius: 8px;
         }
-        button { padding: 7px 13px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        button:hover { opacity: 0.85; }
+        button { padding: 7px 13px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
         .btn-pass { background: #f39c12; color: #000; }
         .btn-resign { background: #e74c3c; color: #fff; }
-        .btn-sound { background: #2980b9; color: #fff; }
-
-        /* Nút Setting cố định góc dưới bên phải */
-        .setting-btn {
+        .btn-setting-corner {
             position: fixed;
-            bottom: 18px;
-            right: 18px;
+            bottom: 16px;
+            right: 16px;
             width: 48px;
             height: 48px;
             border-radius: 50%;
@@ -74,52 +76,27 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.7);
             z-index: 950;
-            padding: 0;
+            transition: transform 0.2s;
         }
-        .setting-btn:hover { transform: rotate(45deg); }
-
-        /* Bảng Setting nổi nhỏ gọn ngay bên trong trang, không nhảy sang cửa sổ riêng */
-        .setting-modal {
+        .btn-setting-corner:hover { transform: rotate(45deg) scale(1.08); }
+        .setting-popup {
             position: fixed;
             bottom: 76px;
-            right: 18px;
-            width: 340px;
-            height: 430px;
+            right: 16px;
+            width: 390px;
+            height: 440px;
+            max-width: 92vw;
+            max-height: 80vh;
             background: #1e1e26;
             border: 2px solid #f5b041;
             border-radius: 12px;
             box-shadow: 0 10px 35px rgba(0,0,0,0.85);
             z-index: 960;
             overflow: hidden;
-            display: flex;
-            flex-direction: column;
         }
-        .setting-header {
-            background: #2b2b36;
-            padding: 8px 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 14px;
-            font-weight: bold;
-            color: #f5b041;
-            border-bottom: 1px solid #3a3a4a;
-        }
-        .setting-header button {
-            background: #e74c3c;
-            color: #fff;
-            padding: 3px 9px;
-            font-size: 12px;
-        }
-        .setting-modal iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            background: #1e1e26;
-        }
-
+        .setting-popup iframe { width: 100%; height: 100%; border: none; }
         .overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.9);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
@@ -131,41 +108,38 @@
 <body>
 
     <div class="hud">
-        <div class="stat-box" id="playerLabel">Chế độ: Chơi thử 2 người</div>
-        <div class="timer-box timer-active" id="blackTimerBox">⚫ Đen: <span id="blackTimeText">05:00</span></div>
-        <div class="timer-box" id="whiteTimerBox">⚪ Trắng: <span id="whiteTimeText">05:00</span></div>
+        <div class="stat-box" id="playerLabel">Chế độ: 2 người (1 máy)</div>
+        <div class="clock-box clock-active" id="blackClockBox">⚫ Đen: 05:00</div>
+        <div class="clock-box" id="whiteClockBox">⚪ Trắng: 05:00</div>
         <div class="stat-box">Tù binh — Đen: <strong id="blackCap">0</strong> | Trắng: <strong id="whiteCap">0</strong></div>
-        <button class="btn-sound" id="soundToggleBtn" onclick="toggleSound()">🔊 Âm thanh: Bật</button>
-        <button class="btn-pass" onclick="handlePass()">Bỏ Lượt (Pass)</button>
+        <button class="btn-pass" onclick="handlePass()">Bỏ Lượt</button>
         <button class="btn-resign" onclick="handleResign()">Đầu Hàng</button>
     </div>
 
-    <canvas id="goCanvas" width="900" height="900"></canvas>
+    <canvas id="goCanvas" width="1000" height="1000"></canvas>
 
-    <!-- Nút Setting & Bảng Cài Đặt Nổi Tại Chỗ -->
-    <button class="setting-btn" title="Cài đặt (Setting)" onclick="toggleSettingPanel()">⚙️</button>
-    <div class="setting-modal hidden" id="settingModal">
-        <div class="setting-header">
-            <span>⚙️ Cài Đặt Trò Chơi</span>
-            <button onclick="toggleSettingPanel()">Đóng ✕</button>
-        </div>
+    <!-- NÚT MỞ BẢNG SETTING GÓC DƯỚI PHẢI -->
+    <button class="btn-setting-corner" title="Cài đặt âm thanh & giao diện" onclick="toggleSettingPanel()">⚙️</button>
+
+    <!-- KHUNG SETTING NỔI TẠI CHỖ (LOAD INDEX2.HTML) -->
+    <div class="setting-popup hidden" id="settingPopup">
         <iframe src="/index2.html" id="settingFrame"></iframe>
     </div>
 
+    <!-- MÀN HÌNH KẾT THÚC -->
     <div class="overlay hidden" id="endOverlay">
         <h1 id="endTitle" style="font-size: 46px; margin-bottom: 8px;"></h1>
         <p id="endReason" style="font-size: 19px; color: #ccc; margin-bottom: 24px;"></p>
         <button onclick="exitMatch()" style="padding: 12px 26px; font-size: 16px; background: #2ecc71; color: #000;">Quay về sảnh</button>
     </div>
 
-    <audio id="bgMusicPlayer" loop></audio>
-
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const canvas = document.getElementById('goCanvas');
         const ctx = canvas.getContext('2d');
         const GRID_SIZE = 9;
-        const COLS_LABEL = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+        const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+        const INITIAL_TIME = 300; // 5 phút = 300 giây
 
         const username = sessionStorage.getItem('go_username');
         const roomId = sessionStorage.getItem('go_roomId');
@@ -178,59 +152,52 @@
             document.getElementById('playerLabel').innerText = `${username} (${myColor === 1 ? 'Đen' : 'Trắng'}) vs ${opponent}`;
         }
 
-        // --- MỞ / ĐÓNG BẢNG SETTING NỔI NGAY TRONG MÀN HÌNH ---
-        function toggleSettingPanel() {
-            const modal = document.getElementById('settingModal');
-            modal.classList.toggle('hidden');
-            if (!modal.classList.contains('hidden')) {
-                document.getElementById('settingFrame').src = '/index2.html';
-            }
-        }
+        // --- QUẢN LÝ SETTING (ÂM LƯỢNG, NHẠC NỀN, BACKGROUND) ---
+        let sfxVolume = Number(localStorage.getItem('go_sfx_vol') ?? 100) / 100;
+        let bgmVolume = Number(localStorage.getItem('go_bgm_vol') ?? 60) / 100;
+        const bgmAudio = new Audio();
+        bgmAudio.loop = true;
 
-        // --- QUẢN LÝ CÀI ĐẶT TỪ INDEX2.HTML ---
-        let sfxVolume = 1.0;
-        let bgmVolume = 0.5;
-        let soundEnabled = true;
+        function applySavedSettings() {
+            sfxVolume = Number(localStorage.getItem('go_sfx_vol') ?? 100) / 100;
+            bgmVolume = Number(localStorage.getItem('go_bgm_vol') ?? 60) / 100;
+            bgmAudio.volume = bgmVolume;
 
-        function applySettingsFromStorage() {
-            const savedSfx = localStorage.getItem('go_sfx_vol');
-            if (savedSfx !== null) sfxVolume = Number(savedSfx) / 100;
-
-            const savedBgmVol = localStorage.getItem('go_bgm_vol');
-            if (savedBgmVol !== null) bgmVolume = Number(savedBgmVol) / 100;
-
-            const bgmData = localStorage.getItem('go_bgm_data');
-            const bgPlayer = document.getElementById('bgMusicPlayer');
-            bgPlayer.volume = soundEnabled ? bgmVolume : 0;
-            if (bgmData) {
-                if (bgPlayer.src !== bgmData) {
-                    bgPlayer.src = bgmData;
-                }
-                if (soundEnabled && bgPlayer.paused) {
-                    bgPlayer.play().catch(() => {});
-                }
-            } else {
-                bgPlayer.pause();
-                bgPlayer.removeAttribute('src');
-            }
-
-            const bgImg = localStorage.getItem('go_custom_bg');
-            if (bgImg) {
-                document.body.style.backgroundImage = `url('${bgImg}')`;
+            const savedBg = localStorage.getItem('go_custom_bg');
+            if (savedBg) {
+                document.body.style.backgroundImage = `url('${savedBg}')`;
             } else {
                 document.body.style.backgroundImage = 'none';
             }
+
+            const savedBgm = localStorage.getItem('go_custom_bgm');
+            if (savedBgm && bgmAudio.src !== savedBgm) {
+                bgmAudio.src = savedBgm;
+                bgmAudio.play().catch(() => {});
+            } else if (!savedBgm) {
+                bgmAudio.pause();
+                bgmAudio.removeAttribute('src');
+            }
+        }
+        applySavedSettings();
+
+        function toggleSettingPanel() {
+            const box = document.getElementById('settingPopup');
+            box.classList.toggle('hidden');
         }
 
-        window.addEventListener('storage', applySettingsFromStorage);
         window.addEventListener('message', (e) => {
-            if (e.data === 'settingsUpdated') applySettingsFromStorage();
+            if (!e.data || typeof e.data !== 'object') return;
+            if (e.data.type === 'updateSettings') {
+                applySavedSettings();
+                if (e.data.testSfx) playMoveSound();
+            } else if (e.data.type === 'closeSettings') {
+                document.getElementById('settingPopup').classList.add('hidden');
+            }
         });
-        applySettingsFromStorage();
 
-        // --- HỆ THỐNG ÂM THANH ĐẶT QUÂN ---
+        // --- ÂM THANH ĐẶT QUÂN ---
         const moveSound = new Audio('/sound.mp3');
-        moveSound.preload = 'auto';
         let audioCtx = null;
 
         function unlockAudio() {
@@ -239,190 +206,140 @@
                 if (AudioContext) audioCtx = new AudioContext();
             }
             if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-            const bgPlayer = document.getElementById('bgMusicPlayer');
-            if (soundEnabled && bgPlayer.src && bgPlayer.paused) {
-                bgPlayer.play().catch(() => {});
-            }
+            if (bgmAudio.src && bgmAudio.paused) bgmAudio.play().catch(() => {});
         }
-        window.addEventListener('pointerdown', unlockAudio);
+        document.addEventListener('pointerdown', unlockAudio, { once: true });
 
-        function playSynthStoneClick() {
+        function playSynthClack() {
             if (sfxVolume <= 0) return;
-            try {
-                unlockAudio();
-                if (!audioCtx) return;
-                const now = audioCtx.currentTime;
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(520, now);
-                osc.frequency.exponentialRampToValueAtTime(110, now + 0.045);
-                gain.gain.setValueAtTime(0.65 * sfxVolume, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.055);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start(now);
-                osc.stop(now + 0.06);
-            } catch (e) {}
+            unlockAudio();
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(920, now);
+            osc.frequency.exponentialRampToValueAtTime(160, now + 0.055);
+            gain.gain.setValueAtTime(0.8 * sfxVolume, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.065);
         }
 
-        function playStoneSound() {
-            if (!soundEnabled || sfxVolume <= 0) return;
-            try {
-                moveSound.volume = sfxVolume;
-                moveSound.currentTime = 0;
-                const p = moveSound.play();
-                if (p !== undefined) p.catch(() => playSynthStoneClick());
-            } catch (e) {
-                playSynthStoneClick();
-            }
+        function playMoveSound() {
+            if (sfxVolume <= 0) return;
+            moveSound.volume = sfxVolume;
+            moveSound.currentTime = 0;
+            const p = moveSound.play();
+            if (p !== undefined) p.catch(() => playSynthClack());
         }
 
-        function toggleSound() {
-            soundEnabled = !soundEnabled;
-            const btn = document.getElementById('soundToggleBtn');
-            btn.innerText = soundEnabled ? '🔊 Âm thanh: Bật' : '🔇 Âm thanh: Tắt';
-            btn.style.background = soundEnabled ? '#2980b9' : '#555';
-            applySettingsFromStorage();
-            if (soundEnabled) playStoneSound();
-        }
-
-        // --- TRẠNG THÁI VÁN CỜ & CHỐNG RESET KHI F5 ---
-        const STATE_KEY = 'go_offline_state_v1';
+        // --- TRẠNG THÁI VÁN CỜ & ĐỒNG HỒ 5 PHÚT ---
         let board = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(0));
         let prevBoard = null;
         let currentTurn = 1;
         let captures = { 1: 0, 2: 0 };
         let lastMove = null;
         let passCount = 0;
-        let gameOver = false;
+        let isGameOver = false;
+        let hoverPoint = null;
 
-        // Quỹ thời gian 5 phút (300 giây) cho mỗi người chơi
-        let timeLeft = { 1: 300, 2: 300 };
-        let lastTickTime = Date.now();
-        let timerInterval = null;
+        // Quỹ thời gian (giây) & mốc đồng bộ server/local
+        let timeLeft = { 1: INITIAL_TIME, 2: INITIAL_TIME };
+        let lastTurnStartTimestamp = Date.now();
 
-        function saveOfflineState() {
-            if (isOnline || gameOver) return;
-            localStorage.setItem(STATE_KEY, JSON.stringify({
+        // Lưu/Khôi phục trạng thái offline khi F5
+        const LOCAL_STATE_KEY = 'go_local_match_state_v2';
+        function saveLocalState() {
+            if (isOnline || isGameOver) return;
+            localStorage.setItem(LOCAL_STATE_KEY, JSON.stringify({
                 board, prevBoard, currentTurn, captures, lastMove, passCount,
-                timeLeft, lastTickTime: Date.now()
+                timeLeft, lastTurnStartTimestamp
             }));
         }
 
-        function loadOfflineState() {
+        function loadLocalState() {
             if (isOnline) return;
-            const raw = localStorage.getItem(STATE_KEY);
-            if (!raw) return;
             try {
-                const st = JSON.parse(raw);
-                if (st && st.board && st.timeLeft) {
-                    board = st.board;
-                    prevBoard = st.prevBoard || null;
-                    currentTurn = st.currentTurn || 1;
-                    captures = st.captures || { 1: 0, 2: 0 };
-                    lastMove = st.lastMove || null;
-                    passCount = st.passCount || 0;
-                    timeLeft = st.timeLeft;
-
-                    const elapsedSec = Math.floor((Date.now() - (st.lastTickTime || Date.now())) / 1000);
-                    if (elapsedSec > 0) {
-                        timeLeft[currentTurn] = Math.max(0, timeLeft[currentTurn] - elapsedSec);
-                    }
-                    lastTickTime = Date.now();
+                const raw = localStorage.getItem(LOCAL_STATE_KEY);
+                if (!raw) return;
+                const s = JSON.parse(raw);
+                if (s && s.board && s.timeLeft) {
+                    board = s.board;
+                    prevBoard = s.prevBoard;
+                    currentTurn = s.currentTurn;
+                    captures = s.captures;
+                    lastMove = s.lastMove;
+                    passCount = s.passCount;
+                    timeLeft = s.timeLeft;
+                    lastTurnStartTimestamp = s.lastTurnStartTimestamp || Date.now();
                 }
-            } catch (e) {}
+            } catch (err) {}
         }
+        loadLocalState();
 
-        function resetGame() {
-            localStorage.removeItem(STATE_KEY);
-            board = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(0));
-            prevBoard = null;
-            currentTurn = 1;
-            captures = { 1: 0, 2: 0 };
-            lastMove = null;
-            passCount = 0;
-            gameOver = false;
-            timeLeft = { 1: 300, 2: 300 };
-            lastTickTime = Date.now();
-            document.getElementById('endOverlay').classList.add('hidden');
-            updateUI();
-            drawBoard();
-            startTimerLoop();
-        }
-
-        function formatTime(sec) {
+        function formatClock(sec) {
             const s = Math.max(0, Math.ceil(sec));
+            if (s <= 30 && s > 0) return `⏳ Đếm ngược: ${s}s`;
             const m = Math.floor(s / 60);
-            const r = s % 60;
-            return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+            const rem = s % 60;
+            return `${String(m).padStart(2, '0')}:${String(rem).padStart(2, '0')}`;
         }
 
-        function updateTimerDisplay() {
-            const bEl = document.getElementById('blackTimeText');
-            const wEl = document.getElementById('whiteTimeText');
-            const bBox = document.getElementById('blackTimerBox');
-            const wBox = document.getElementById('whiteTimerBox');
+        function renderClocks() {
+            const elapsed = (Date.now() - lastTurnStartTimestamp) / 1000;
+            let liveBlack = currentTurn === 1 && !isGameOver ? Math.max(0, timeLeft[1] - elapsed) : timeLeft[1];
+            let liveWhite = currentTurn === 2 && !isGameOver ? Math.max(0, timeLeft[2] - elapsed) : timeLeft[2];
 
-            const bSec = Math.max(0, Math.ceil(timeLeft[1]));
-            const wSec = Math.max(0, Math.ceil(timeLeft[2]));
+            const bBox = document.getElementById('blackClockBox');
+            const wBox = document.getElementById('whiteClockBox');
 
-            bEl.innerText = bSec <= 30 && bSec > 0 ? `⏳ ${bSec}s` : formatTime(bSec);
-            wEl.innerText = wSec <= 30 && wSec > 0 ? `⏳ ${wSec}s` : formatTime(wSec);
+            bBox.innerText = `⚫ Đen: ${formatClock(liveBlack)}`;
+            wBox.innerText = `⚪ Trắng: ${formatClock(liveWhite)}`;
 
-            bBox.classList.toggle('timer-active', currentTurn === 1 && !gameOver);
-            wBox.classList.toggle('timer-active', currentTurn === 2 && !gameOver);
+            bBox.className = 'clock-box' + (!isGameOver && currentTurn === 1 ? ' clock-active' : '') + (!isGameOver && currentTurn === 1 && liveBlack <= 30 ? ' clock-danger' : '');
+            wBox.className = 'clock-box' + (!isGameOver && currentTurn === 2 ? ' clock-active' : '') + (!isGameOver && currentTurn === 2 && liveWhite <= 30 ? ' clock-danger' : '');
 
-            bBox.classList.toggle('timer-danger', currentTurn === 1 && bSec <= 30 && !gameOver);
-            wBox.classList.toggle('timer-danger', currentTurn === 2 && wSec <= 30 && !gameOver);
-        }
-
-        function startTimerLoop() {
-            if (timerInterval) clearInterval(timerInterval);
-            lastTickTime = Date.now();
-
-            timerInterval = setInterval(() => {
-                if (gameOver) {
-                    clearInterval(timerInterval);
-                    return;
+            // Kiểm tra hết giờ ngay trên client (kể cả khi mạng trễ hoặc đang chơi 1 máy)
+            if (!isGameOver) {
+                if (currentTurn === 1 && liveBlack <= 0) {
+                    timeLeft[1] = 0;
+                    triggerTimeoutEnd(2, 1);
+                } else if (currentTurn === 2 && liveWhite <= 0) {
+                    timeLeft[2] = 0;
+                    triggerTimeoutEnd(1, 2);
                 }
-
-                const now = Date.now();
-                const delta = (now - lastTickTime) / 1000;
-                lastTickTime = now;
-
-                timeLeft[currentTurn] = Math.max(0, timeLeft[currentTurn] - delta);
-                updateTimerDisplay();
-
-                if (!isOnline) saveOfflineState();
-
-                if (timeLeft[currentTurn] <= 0) {
-                    timeLeft[currentTurn] = 0;
-                    updateTimerDisplay();
-                    clearInterval(timerInterval);
-
-                    if (isOnline) {
-                        socket.emit('claimTimeout', { roomId });
-                    } else {
-                        const loserName = currentTurn === 1 ? 'Quân Đen' : 'Quân Trắng';
-                        const winnerTitle = currentTurn === 1 ? 'QUÂN TRẮNG CHIẾN THẮNG!' : 'QUÂN ĐEN CHIẾN THẮNG!';
-                        showEndScreen(winnerTitle, `${loserName} đã hết tổng thời gian 5 phút!`, true);
-                    }
-                }
-            }, 250);
+            }
         }
 
-        // --- TẢI VÂN GỖ WOOD.PNG & TỰ VẼ BÀN CỜ 9x9 ---
+        function triggerTimeoutEnd(winnerColor, loserColor) {
+            if (isGameOver) return;
+            isGameOver = true;
+            localStorage.removeItem(LOCAL_STATE_KEY);
+            if (isOnline) {
+                socket.emit('claimTimeout', { roomId, loserColor });
+            } else {
+                const winText = winnerColor === 1 ? 'QUÂN ĐEN THẮNG!' : 'QUÂN TRẮNG THẮNG!';
+                const loseName = loserColor === 1 ? 'Quân Đen' : 'Quân Trắng';
+                showEndScreen(winText, `${loseName} đã hết 5 phút thời gian!`, true);
+            }
+        }
+
+        // Vòng lặp cập nhật đồng hồ mượt mỗi 200ms
+        setInterval(renderClocks, 200);
+
+        // --- VẼ BÀN CỜ GỖ 9x9 ---
         const woodImg = new Image();
         let woodLoaded = false;
         woodImg.onload = () => { woodLoaded = true; drawBoard(); };
         woodImg.src = '/wood.png';
 
         const MARGIN = 115;
-        const BOARD_PX = canvas.width - MARGIN * 2;
-        const STEP = BOARD_PX / (GRID_SIZE - 1);
-        const STONE_RADIUS = STEP * 0.44;
-        let hoverPoint = null;
+        const BOARD_SPAN = canvas.width - MARGIN * 2;
+        const STEP = BOARD_SPAN / (GRID_SIZE - 1);
+        const STONE_RADIUS = STEP * 0.43;
 
         function getCoord(col, row) {
             return { x: MARGIN + col * STEP, y: MARGIN + row * STEP };
@@ -434,24 +351,24 @@
             ctx.arc(x, y, STONE_RADIUS, 0, Math.PI * 2);
 
             if (isGhost) {
-                ctx.fillStyle = color === 1 ? 'rgba(20, 20, 20, 0.42)' : 'rgba(248, 248, 248, 0.55)';
+                ctx.fillStyle = color === 1 ? 'rgba(20, 20, 20, 0.4)' : 'rgba(250, 250, 250, 0.55)';
                 ctx.fill();
                 ctx.lineWidth = 2;
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
                 ctx.stroke();
             } else {
                 ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
-                ctx.shadowBlur = 10;
-                ctx.shadowOffsetX = 4;
-                ctx.shadowOffsetY = 5;
+                ctx.shadowBlur = STONE_RADIUS * 0.28;
+                ctx.shadowOffsetX = STONE_RADIUS * 0.1;
+                ctx.shadowOffsetY = STONE_RADIUS * 0.14;
 
                 const grad = ctx.createRadialGradient(
                     x - STONE_RADIUS * 0.3, y - STONE_RADIUS * 0.3, STONE_RADIUS * 0.1,
                     x, y, STONE_RADIUS
                 );
                 if (color === 1) {
-                    grad.addColorStop(0, '#5a5a5a');
-                    grad.addColorStop(0.3, '#1e1e1e');
+                    grad.addColorStop(0, '#555555');
+                    grad.addColorStop(0.35, '#1c1c1c');
                     grad.addColorStop(1, '#050505');
                 } else {
                     grad.addColorStop(0, '#ffffff');
@@ -466,34 +383,35 @@
 
         function drawBoard() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
             if (woodLoaded) {
                 ctx.drawImage(woodImg, 0, 0, canvas.width, canvas.height);
             } else {
-                ctx.fillStyle = '#d4a36a';
+                ctx.fillStyle = '#d4a359';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
 
-            ctx.strokeStyle = '#1e160d';
-            ctx.lineWidth = 4.5;
-            ctx.strokeRect(MARGIN - 8, MARGIN - 8, BOARD_PX + 16, BOARD_PX + 16);
+            const outerPad = 46;
+            ctx.save();
+            ctx.strokeStyle = '#1a120b';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(MARGIN - outerPad, MARGIN - outerPad, BOARD_SPAN + outerPad * 2, BOARD_SPAN + outerPad * 2);
 
-            ctx.lineWidth = 2.2;
+            ctx.lineWidth = 2.4;
             for (let i = 0; i < GRID_SIZE; i++) {
                 const pos = MARGIN + i * STEP;
                 ctx.beginPath();
-                ctx.moveTo(pos, MARGIN);
-                ctx.lineTo(pos, MARGIN + BOARD_PX);
+                ctx.moveTo(MARGIN, pos);
+                ctx.lineTo(MARGIN + BOARD_SPAN, pos);
                 ctx.stroke();
 
                 ctx.beginPath();
-                ctx.moveTo(MARGIN, pos);
-                ctx.lineTo(MARGIN + BOARD_PX, pos);
+                ctx.moveTo(pos, MARGIN);
+                ctx.lineTo(pos, MARGIN + BOARD_SPAN);
                 ctx.stroke();
             }
 
             const starPoints = [[2, 2], [6, 2], [4, 4], [2, 6], [6, 6]];
-            ctx.fillStyle = '#1e160d';
+            ctx.fillStyle = '#1a120b';
             for (const [sc, sr] of starPoints) {
                 const pt = getCoord(sc, sr);
                 ctx.beginPath();
@@ -501,20 +419,21 @@
                 ctx.fill();
             }
 
-            ctx.fillStyle = '#24180b';
+            ctx.fillStyle = '#1a120b';
             ctx.font = 'bold 21px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             for (let i = 0; i < GRID_SIZE; i++) {
                 const pos = MARGIN + i * STEP;
-                ctx.fillText(COLS_LABEL[i], pos, MARGIN - 54);
-                ctx.fillText(COLS_LABEL[i], pos, MARGIN + BOARD_PX + 54);
+                ctx.fillText(LETTERS[i], pos, MARGIN - outerPad - 22);
+                ctx.fillText(LETTERS[i], pos, MARGIN + BOARD_SPAN + outerPad + 22);
                 const rowNum = String(GRID_SIZE - i);
-                ctx.fillText(rowNum, MARGIN - 54, pos);
-                ctx.fillText(rowNum, MARGIN + BOARD_PX + 54, pos);
+                ctx.fillText(rowNum, MARGIN - outerPad - 24, pos);
+                ctx.fillText(rowNum, MARGIN + BOARD_SPAN + outerPad + 24, pos);
             }
+            ctx.restore();
 
-            if (!gameOver && hoverPoint && board[hoverPoint.col][hoverPoint.row] === 0) {
+            if (!isGameOver && hoverPoint && board[hoverPoint.col][hoverPoint.row] === 0) {
                 const pt = getCoord(hoverPoint.col, hoverPoint.row);
                 drawStone(pt.x, pt.y, currentTurn, true);
             }
@@ -528,7 +447,7 @@
 
                         if (lastMove && lastMove.col === c && lastMove.row === r) {
                             ctx.beginPath();
-                            ctx.arc(pt.x, pt.y, STONE_RADIUS * 0.24, 0, Math.PI * 2);
+                            ctx.arc(pt.x, pt.y, STONE_RADIUS * 0.25, 0, Math.PI * 2);
                             ctx.fillStyle = '#e74c3c';
                             ctx.fill();
                         }
@@ -537,15 +456,13 @@
             }
         }
 
-        function getNearestIntersection(clientX, clientY) {
+        function getNearestCell(clientX, clientY) {
             const rect = canvas.getBoundingClientRect();
             const x = (clientX - rect.left) * (canvas.width / rect.width);
             const y = (clientY - rect.top) * (canvas.height / rect.height);
-
-            if (x < MARGIN - STEP * 0.75 || x > MARGIN + BOARD_PX + STEP * 0.75 ||
-                y < MARGIN - STEP * 0.75 || y > MARGIN + BOARD_PX + STEP * 0.75) {
-                return null;
-            }
+            const minBound = MARGIN - STEP * 0.75;
+            const maxBound = MARGIN + BOARD_SPAN + STEP * 0.75;
+            if (x < minBound || x > maxBound || y < minBound || y > maxBound) return null;
 
             const col = Math.max(0, Math.min(GRID_SIZE - 1, Math.round((x - MARGIN) / STEP)));
             const row = Math.max(0, Math.min(GRID_SIZE - 1, Math.round((y - MARGIN) / STEP)));
@@ -553,13 +470,13 @@
         }
 
         canvas.addEventListener('mousemove', (e) => {
-            if (gameOver || (isOnline && currentTurn !== myColor)) {
+            if (isGameOver || (isOnline && currentTurn !== myColor)) {
                 hoverPoint = null;
                 return;
             }
-            const nearest = getNearestIntersection(e.clientX, e.clientY);
-            if (JSON.stringify(nearest) !== JSON.stringify(hoverPoint)) {
-                hoverPoint = nearest;
+            const cell = getNearestCell(e.clientX, e.clientY);
+            if (JSON.stringify(cell) !== JSON.stringify(hoverPoint)) {
+                hoverPoint = cell;
                 drawBoard();
             }
         });
@@ -570,27 +487,33 @@
         });
 
         canvas.addEventListener('click', (e) => {
-            if (gameOver) return;
-            unlockAudio();
-            if (isOnline && currentTurn !== myColor) return;
-            const nearest = getNearestIntersection(e.clientX, e.clientY);
-            if (!nearest) return;
+            if (isGameOver || (isOnline && currentTurn !== myColor)) return;
+            const cell = getNearestCell(e.clientX, e.clientY);
+            if (!cell) return;
 
             if (isOnline) {
-                socket.emit('playMove', { roomId, col: nearest.col, row: nearest.row, username });
+                socket.emit('playMove', { roomId, col: cell.col, row: cell.row, username });
             } else {
-                const res = executeMove(nearest.col, nearest.row, currentTurn);
+                const res = executeMove(cell.col, cell.row, currentTurn);
                 if (!res.ok) return alert(res.msg);
-                playStoneSound();
+                playMoveSound();
                 hoverPoint = null;
-                saveOfflineState();
                 updateUI();
                 drawBoard();
-                checkNoValidMovesAfterTurn();
+
+                if (!hasAnyLegalMove(currentTurn)) {
+                    isGameOver = true;
+                    localStorage.removeItem(LOCAL_STATE_KEY);
+                    const winnerText = currentTurn === 1 ? 'QUÂN TRẮNG THẮNG!' : 'QUÂN ĐEN THẮNG!';
+                    const loserName = currentTurn === 1 ? 'Quân Đen' : 'Quân Trắng';
+                    showEndScreen(winnerText, `${loserName} không còn nước đi hợp lệ!`, true);
+                } else {
+                    saveLocalState();
+                }
             }
         });
 
-        // --- LUẬT CỜ VÂY CHUẨN & KIỂM TRA HẾT NƯỚC ĐI ---
+        // --- LUẬT CỜ VÂY CHUẨN ---
         const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
         const cloneBoard = (b) => b.map(r => [...r]);
         const isSameBoard = (b1, b2) => b1 && b2 && JSON.stringify(b1) === JSON.stringify(b2);
@@ -645,29 +568,23 @@
             return { ok: true, nextBoard, capturedCount };
         }
 
-        function hasAnyValidMove(color) {
+        function hasAnyLegalMove(color) {
             for (let c = 0; c < GRID_SIZE; c++) {
                 for (let r = 0; r < GRID_SIZE; r++) {
-                    if (board[c][r] === 0) {
-                        if (simulateMove(board, prevBoard, c, r, color).ok) return true;
-                    }
+                    if (board[c][r] === 0 && simulateMove(board, prevBoard, c, r, color).ok) return true;
                 }
             }
             return false;
         }
 
-        function checkNoValidMovesAfterTurn() {
-            if (gameOver) return;
-            if (!hasAnyValidMove(currentTurn)) {
-                const loserName = currentTurn === 1 ? 'Quân Đen' : 'Quân Trắng';
-                const winnerTitle = currentTurn === 1 ? 'QUÂN TRẮNG CHIẾN THẮNG!' : 'QUÂN ĐEN CHIẾN THẮNG!';
-                showEndScreen(winnerTitle, `${loserName} hết nước đi hợp lệ (toàn bộ ô trống đều là điểm tự sát)!`, true);
-            }
-        }
-
         function executeMove(col, row, color) {
             const sim = simulateMove(board, prevBoard, col, row, color);
             if (!sim.ok) return sim;
+
+            // Chốt thời gian đã tiêu hao của người vừa đánh và chuyển đồng hồ sang đối thủ
+            const elapsed = (Date.now() - lastTurnStartTimestamp) / 1000;
+            timeLeft[color] = Math.max(0, timeLeft[color] - elapsed);
+            lastTurnStartTimestamp = Date.now();
 
             prevBoard = cloneBoard(board);
             board = sim.nextBoard;
@@ -675,7 +592,6 @@
             lastMove = { col, row };
             currentTurn = color === 1 ? 2 : 1;
             passCount = 0;
-            lastTickTime = Date.now();
             return { ok: true };
         }
 
@@ -722,45 +638,47 @@
         function updateUI() {
             document.getElementById('blackCap').innerText = captures[1];
             document.getElementById('whiteCap').innerText = captures[2];
-            updateTimerDisplay();
+            renderClocks();
         }
 
         function handlePass() {
-            if (gameOver) return;
+            if (isGameOver) return;
             if (isOnline) {
                 if (currentTurn === myColor) socket.emit('passTurn', { roomId, username });
             } else {
+                const elapsed = (Date.now() - lastTurnStartTimestamp) / 1000;
+                timeLeft[currentTurn] = Math.max(0, timeLeft[currentTurn] - elapsed);
+                lastTurnStartTimestamp = Date.now();
+
                 passCount++;
                 if (passCount >= 2) {
+                    isGameOver = true;
+                    localStorage.removeItem(LOCAL_STATE_KEY);
                     const res = calculateTerritoryScore();
                     const winText = res.blackTotal > res.whiteTotal ? 'QUÂN ĐEN THẮNG!' : 'QUÂN TRẮNG THẮNG!';
-                    showEndScreen(winText, `Hai bên bỏ lượt — Đen: ${res.blackTotal} | Trắng: ${res.whiteTotal} (gồm 6.5 Komi)`, true);
+                    showEndScreen(winText, `Đất + Tù binh — Đen: ${res.blackTotal} | Trắng: ${res.whiteTotal} (gồm 6.5 Komi)`, true);
                 } else {
-                    alert(`${currentTurn === 1 ? 'Đen' : 'Trắng'} đã bỏ lượt!`);
                     currentTurn = currentTurn === 1 ? 2 : 1;
-                    lastTickTime = Date.now();
-                    saveOfflineState();
                     updateUI();
                     drawBoard();
-                    checkNoValidMovesAfterTurn();
+                    saveLocalState();
                 }
             }
         }
 
         function handleResign() {
-            if (gameOver) return;
-            if (!confirm('Bạn chắc chắn muốn đầu hàng?')) return;
-            if (isOnline) socket.emit('resignGame', { roomId, username });
-            else showEndScreen(currentTurn === 1 ? 'QUÂN TRẮNG THẮNG!' : 'QUÂN ĐEN THẮNG!', 'Đã đầu hàng', false);
+            if (isGameOver || !confirm('Bạn chắc chắn muốn đầu hàng?')) return;
+            if (isOnline) {
+                socket.emit('resignGame', { roomId, username });
+            } else {
+                isGameOver = true;
+                localStorage.removeItem(LOCAL_STATE_KEY);
+                showEndScreen(currentTurn === 1 ? 'QUÂN TRẮNG THẮNG!' : 'QUÂN ĐEN THẮNG!', 'Đã đầu hàng', false);
+            }
         }
 
         function showEndScreen(titleText, reasonText, isWin) {
-            if (gameOver) return;
-            gameOver = true;
-            localStorage.removeItem(STATE_KEY);
-            if (timerInterval) clearInterval(timerInterval);
-            updateTimerDisplay();
-
+            isGameOver = true;
             const titleEl = document.getElementById('endTitle');
             titleEl.innerText = titleText;
             titleEl.style.color = isWin ? '#2ecc71' : '#e74c3c';
@@ -769,13 +687,9 @@
         }
 
         function exitMatch() {
-            localStorage.removeItem(STATE_KEY);
-            if (isOnline) {
-                sessionStorage.removeItem('go_roomId');
-                window.location.href = '/index1.html';
-            } else {
-                resetGame();
-            }
+            localStorage.removeItem(LOCAL_STATE_KEY);
+            sessionStorage.removeItem('go_roomId');
+            window.location.href = '/index1.html';
         }
 
         // --- ĐỒNG BỘ ONLINE VỚI SERVER.JS ---
@@ -788,11 +702,14 @@
                 currentTurn = game.turn;
                 if (game.captures) captures = game.captures;
                 if (game.lastMove) lastMove = game.lastMove;
+
+                // Nhận quỹ thời gian thật từ Server và reset mốc đếm cục bộ
                 if (game.timeLeft) {
-                    timeLeft = { ...game.timeLeft };
-                    lastTickTime = Date.now();
+                    timeLeft = { 1: Number(game.timeLeft[1]), 2: Number(game.timeLeft[2]) };
+                    lastTurnStartTimestamp = Date.now();
                 }
-                if (hadMove) playStoneSound();
+
+                if (hadMove) playMoveSound();
                 updateUI();
                 drawBoard();
             });
@@ -800,23 +717,16 @@
             socket.on('invalidMove', (msg) => alert(msg));
 
             socket.on('matchOver', ({ winner, reason, winnerNewScore }) => {
+                isGameOver = true;
                 const isWin = winner === username;
                 showEndScreen(isWin ? 'CHIẾN THẮNG! (+1 ĐIỂM)' : 'THẤT BẠI!', reason, isWin);
                 if (isWin) sessionStorage.setItem('go_score', winnerNewScore);
                 setTimeout(exitMatch, 3500);
             });
-        } else {
-            loadOfflineState();
-            updateUI();
-            drawBoard();
-            if (timeLeft[currentTurn] <= 0) {
-                const loserName = currentTurn === 1 ? 'Quân Đen' : 'Quân Trắng';
-                const winnerTitle = currentTurn === 1 ? 'QUÂN TRẮNG CHIẾN THẮNG!' : 'QUÂN ĐEN CHIẾN THẮNG!';
-                showEndScreen(winnerTitle, `${loserName} đã hết tổng thời gian 5 phút!`, true);
-            } else {
-                startTimerLoop();
-            }
         }
+
+        updateUI();
+        drawBoard();
     </script>
 </body>
 </html>
