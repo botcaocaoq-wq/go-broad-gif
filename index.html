@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Bàn Cờ Vây 19x19 - Đầy Đủ Luật</title>
+    <style>
+        body {
+            background: #1e1e24;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 12px;
+            user-select: none;
+        }
+        .hud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+            justify-content: center;
+            background: #2b2b36;
+            padding: 10px 20px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+        .stat-box {
+            background: #16161d;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        canvas {
+            box-shadow: 0 8px 25px rgba(0,0,0,0.7);
+            cursor: pointer;
+            max-width: 92vw;
+            max-height: 76vh;
+        }
+        button {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button:hover { opacity: 0.85; }
+        .btn-pass { background: #f39c12; color: #000; }
+        .btn-resign { background: #e74c3c; color: #fff; }
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.88);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            text-align: center;
+        }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div class="hud">
+        <div class="stat-box" id="playerLabel">Chế độ: Chơi thử 2 người trên 1 máy</div>
+        <div class="stat-box" id="turnLabel" style="color: #f5b041; font-weight: bold;">Lượt: Quân Đen</div>
+        <div class="stat-box">Tù binh — Đen ăn: <strong id="blackCap">0</strong> | Trắng ăn: <strong id="whiteCap">0</strong></div>
+        <button class="btn-pass" onclick="handlePass()">Bỏ Lượt (Pass)</button>
+        <button class="btn-resign" onclick="handleResign()">Đầu Hàng</button>
+    </div>
+
+    <canvas id="goCanvas"></canvas>
+
+    <!-- MÀN HÌNH KẾT THÚC TRẬN -->
+    <div class="overlay hidden" id="endOverlay">
+        <h1 id="endTitle" style="font-size: 46px; margin-bottom: 8px;"></h1>
+        <p id="endReason" style="font-size: 19px; color: #ccc; margin-bottom: 24px;"></p>
+        <button onclick="exitMatch()" style="padding: 12px 26px; font-size: 16px; background: #2ecc71; color: #000;">Quay về sảnh tìm người chơi</button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const canvas = document.getElementById('goCanvas');
+        const ctx = canvas.getContext('2d');
+        const GRID_SIZE = 19;
+        const MARGIN = 71.3; // Tọa độ tâm giao điểm góc đo từ Krita
+
+        // Kiểm tra xem đang vào từ sảnh online (index1.html) hay mở trực tiếp để test
+        const username = sessionStorage.getItem('go_username');
+        const roomId = sessionStorage.getItem('go_roomId');
+        const myColor = Number(sessionStorage.getItem('go_color') || 0); // 1: Đen, 2: Trắng, 0: Test 1 máy
+        const opponent = sessionStorage.getItem('go_opponent') || 'Đối thủ';
+        const isOnline = Boolean(username && roomId && typeof io !== 'undefined');
+        const socket = isOnline ? io() : null;
+
+        if (isOnline) {
+            document.getElementById('playerLabel').innerText = `Bạn: ${username} (${myColor === 1 ? 'Đen' : 'Trắng'}) vs ${opponent}`;
+        }
+
+        // Trạng thái ván cờ
+        let board = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(0));
+        let prevBoard = null;
+        let currentTurn = 1; // 1 = Đen đi trước, 2 = Trắng
+        let captures = { 1: 0, 2: 0 }; // Số quân đối phương đã bắt được
+        let lastMove = null; // Lưu tọa độ nước đi cuối {col, row}
+        let passCount = 0;
+
+        // Tải 3 hình ảnh từ wwwroot
+        const boardImg = new Image();
+        const blackImg = new Image();
+        const whiteImg = new Image();
+        boardImg.src = '/board.png';
+        blackImg.src = '/black.png';
+        whiteImg.src = '/white.PNG';
+
+        let loadedCount = 0;
+        [boardImg, blackImg, whiteImg].forEach(img => {
+            img.onload = () => {
+                if (++loadedCount === 3) {
+                    canvas.width = boardImg.naturalWidth;
+                    canvas.height = boardImg.naturalHeight;
+                    if (isOnline) socket.emit('joinGameRoom', { roomId, username });
+                    updateUI();
+                    drawBoard();
+                }
+            };
+        });
+
+        // --- BỘ LUẬT CỜ VÂY CHUẨN ---
+        const cloneBoard = (b) => b.map(r => [...r]);
+        const isSameBoard = (b1, b2) => b1 && b2 && JSON.stringify(b1) === JSON.stringify(b2);
+
+        // Thuật toán BFS tìm cả cụm quân cùng màu và đếm số "Khí" (điểm trống xung quanh)
+        function getGroupAndLiberties(targetBoard, startCol, startRow) {
+            const color = targetBoard[startCol][startRow];
+            const visited = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(false));
+            const group = [];
+            const liberties = new Set();
+            const queue = [[startCol, startRow]];
+            visited[startCol][startRow] = true;
+
+            const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+            while (queue.length > 0) {
+                const [c, r] = queue.shift();
+                group.push([c, r]);
+
+                for (const [dc, dr] of dirs) {
+                    const nc = c + dc, nr = r + dr;
+                    if (nc >= 0 && nc < GRID_SIZE && nr >= 0 && nr < GRID_SIZE) {
+                        if (targetBoard[nc][nr] === 0) {
+                            liberties.add(`${nc},${nr}`);
+                        } else if (targetBoard[nc][nr] === color && !visited[nc][nr]) {
+                            visited[nc][nr] = true;
+                            queue.push([nc, nr]);
+                        }
+                    }
+                }
+            }
+            return { group, liberties: liberties.size };
+        }
+
+        // Xử lý kiểm tra & thực hiện nước đi
+        function executeMove(col, row, color) {
+            if (board[col][row] !== 0) return { ok: false, msg: 'Giao điểm này đã có quân!' };
+
+            const nextBoard = cloneBoard(board);
+            nextBoard[col][row] = color;
+            const enemy = color === 1 ? 2 : 1;
+            const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+            let capturedCount = 0;
+
+            // 1. Kiểm tra ăn quân địch xung quanh (nếu cụm quân địch hết khí = 0)
+            for (const [dc, dr] of dirs) {
+                const nc = col + dc, nr = row + dr;
+                if (nc >= 0 && nc < GRID_SIZE && nr >= 0 && nr < GRID_SIZE && nextBoard[nc][nr] === enemy) {
+                    const { group, liberties } = getGroupAndLiberties(nextBoard, nc, nr);
+                    if (liberties === 0) {
+                        capturedCount += group.length;
+                        for (const [gc, gr] of group) {
+                            nextBoard[gc][gr] = 0; // Bốc quân bị ăn khỏi bàn
+                        }
+                    }
+                }
+            }
+
+            // 2. Luật cấm tự sát: Đặt xong mà quân mình = 0 khí và không ăn được quân địch
+            const selfGroup = getGroupAndLiberties(nextBoard, col, row);
+            if (capturedCount === 0 && selfGroup.liberties === 0) {
+                return { ok: false, msg: 'Phạm luật: Nước đi tự sát!' };
+            }
+
+            // 3. Luật Cướp cờ (Ko): Cấm lặp lại y hệt hình cờ ngay lượt trước đó
+            if (isSameBoard(nextBoard, prevBoard)) {
+                return { ok: false, msg: 'Phạm luật Cướp cờ (Ko): Hãy đánh ở vị trí khác trước!' };
+            }
+
+            // Hợp lệ -> Cập nhật bàn cờ
+            prevBoard = cloneBoard(board);
+            board = nextBoard;
+            captures[color] += capturedCount;
+            lastMove = { col, row };
+            currentTurn = enemy;
+            passCount = 0;
+            return { ok: true };
+        }
+
+        // --- VẼ BÀN CỜ & QUÂN CỜ ---
+        function drawBoard() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
+
+            const stepX = (canvas.width - MARGIN * 2) / (GRID_SIZE - 1);
+            const stepY = (canvas.height - MARGIN * 2) / (GRID_SIZE - 1);
+            const stoneSize = stepX * 0.92;
+
+            for (let col = 0; col < GRID_SIZE; col++) {
+                for (let row = 0; row < GRID_SIZE; row++) {
+                    const stone = board[col][row];
+                    if (stone !== 0) {
+                        const cx = MARGIN + col * stepX;
+                        const cy = MARGIN + row * stepY;
+                        ctx.drawImage(
+                            stone === 1 ? blackImg : whiteImg,
+                            cx - stoneSize / 2,
+                            cy - stoneSize / 2,
+                            stoneSize,
+                            stoneSize
+                        );
+
+                        // Vẽ vòng tròn đỏ nhỏ đánh dấu nước vừa đi
+                        if (lastMove && lastMove.col === col && lastMove.row === row) {
+                            ctx.beginPath();
+                            ctx.arc(cx, cy, stoneSize * 0.16, 0, Math.PI * 2);
+                            ctx.fillStyle = '#e74c3c';
+                            ctx.fill();
+                        }
+                    }
+                }
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('blackCap').innerText = captures[1];
+            document.getElementById('whiteCap').innerText = captures[2];
+            if (isOnline) {
+                document.getElementById('turnLabel').innerText = currentTurn === myColor ? '👉 ĐẾN LƯỢT BẠN' : '⏳ Chờ đối thủ...';
+            } else {
+                document.getElementById('turnLabel').innerText = currentTurn === 1 ? 'Lượt: Quân Đen' : 'Lượt: Quân Trắng';
+            }
+        }
+
+        // --- BẮT SỰ KIỆN CLICK ĐẶT QUÂN ---
+        canvas.addEventListener('click', (e) => {
+            if (isOnline && currentTurn !== myColor) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+            const stepX = (canvas.width - MARGIN * 2) / (GRID_SIZE - 1);
+            const stepY = (canvas.height - MARGIN * 2) / (GRID_SIZE - 1);
+
+            const col = Math.round((clickX - MARGIN) / stepX);
+            const row = Math.round((clickY - MARGIN) / stepY);
+
+            if (col >= 0 && col < GRID_SIZE && row >= 0 && row < GRID_SIZE) {
+                if (isOnline) {
+                    socket.emit('playMove', { roomId, col, row, username });
+                } else {
+                    const res = executeMove(col, row, currentTurn);
+                    if (!res.ok) return alert(res.msg);
+                    updateUI();
+                    drawBoard();
+                }
+            }
+        });
+
+        // --- BỎ LƯỢT & ĐẦU HÀNG ---
+        function handlePass() {
+            if (isOnline) {
+                if (currentTurn === myColor) socket.emit('passTurn', { roomId, username });
+            } else {
+                passCount++;
+                if (passCount >= 2) {
+                    const blackScore = captures[1];
+                    const whiteScore = captures[2] + 6.5; // Komi 6.5 điểm cho Trắng
+                    const winText = blackScore > whiteScore ? 'QUÂN ĐEN THẮNG!' : 'QUÂN TRẮNG THẮNG!';
+                    showEndScreen(winText, `Tù binh — Đen: ${blackScore} | Trắng: ${whiteScore} (đã cộng 6.5 Komi)`, true);
+                } else {
+                    alert(`${currentTurn === 1 ? 'Đen' : 'Trắng'} đã bỏ lượt!`);
+                    currentTurn = currentTurn === 1 ? 2 : 1;
+                    updateUI();
+                }
+            }
+        }
+
+        function handleResign() {
+            if (!confirm('Bạn chắc chắn muốn đầu hàng ván này?')) return;
+            if (isOnline) {
+                socket.emit('resignGame', { roomId, username });
+            } else {
+                const winner = currentTurn === 1 ? 'QUÂN TRẮNG THẮNG!' : 'QUÂN ĐEN THẮNG!';
+                showEndScreen(winner, `${currentTurn === 1 ? 'Quân Đen' : 'Quân Trắng'} đã đầu hàng`, false);
+            }
+        }
+
+        function showEndScreen(titleText, reasonText, isWin) {
+            const titleEl = document.getElementById('endTitle');
+            titleEl.innerText = titleText;
+            titleEl.style.color = isWin ? '#2ecc71' : '#e74c3c';
+            document.getElementById('endReason').innerText = reasonText;
+            document.getElementById('endOverlay').classList.remove('hidden');
+        }
+
+        function exitMatch() {
+            sessionStorage.removeItem('go_roomId');
+            window.location.href = '/index1.html';
+        }
+
+        // --- ĐỒNG BỘ ONLINE KHI NỐI SERVER ---
+        if (isOnline) {
+            socket.on('syncBoard', (game) => {
+                board = game.board;
+                currentTurn = game.turn;
+                if (game.captures) captures = game.captures;
+                if (game.lastMove) lastMove = game.lastMove;
+                updateUI();
+                drawBoard();
+            });
+
+            socket.on('invalidMove', (msg) => alert(msg));
+
+            socket.on('matchOver', ({ winner, reason, winnerNewScore }) => {
+                const isWin = winner === username;
+                showEndScreen(
+                    isWin ? 'CHIẾN THẮNG! (+1 ĐIỂM)' : 'THẤT BẠI!',
+                    reason,
+                    isWin
+                );
+                if (isWin) sessionStorage.setItem('go_score', winnerNewScore);
+                setTimeout(exitMatch, 3500);
+            });
+        }
+    </script>
+</body>
+</html>

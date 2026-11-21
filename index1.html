@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Sảnh Cờ Vây Online</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #1e1e24; color: #fff; display: flex; justify-content: center; padding-top: 40px; }
+        .box { background: #2b2b36; padding: 25px; border-radius: 10px; width: 420px; box-shadow: 0 6px 20px rgba(0,0,0,0.5); }
+        h2 { margin-top: 0; text-align: center; color: #f5b041; }
+        input { width: 100%; padding: 10px; margin: 8px 0; border-radius: 5px; border: none; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; margin-top: 8px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; background: #f5b041; color: #1e1e24; }
+        button.secondary { background: #4a4a5e; color: #fff; }
+        .hidden { display: none; }
+        .render-badge { background: #16161d; padding: 10px; border-radius: 6px; font-size: 13px; margin-bottom: 15px; border-left: 4px solid #2ecc71; word-break: break-all; }
+        .player-item { display: flex; justify-content: space-between; align-items: center; background: #383846; padding: 10px 14px; border-radius: 6px; margin-bottom: 8px; cursor: pointer; transition: 0.2s; }
+        .player-item:hover { background: #4c4c60; }
+        .score-tag { background: #f5b041; color: #000; padding: 2px 8px; border-radius: 12px; font-weight: bold; font-size: 13px; }
+        .invite-popup { position: fixed; top: 20px; right: 20px; background: #2ecc71; color: #000; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); z-index: 999; }
+        .invite-popup button { width: auto; padding: 6px 14px; margin-right: 8px; background: #1e1e24; color: #fff; }
+    </style>
+</head>
+<body>
+
+    <div class="box" id="authBox">
+        <h2>Tài Khoản Cờ Vây</h2>
+        <input type="text" id="usernameInput" placeholder="Nhập tên tài khoản...">
+        <input type="password" id="passwordInput" placeholder="Nhập mật khẩu...">
+        <button onclick="submitAuth(false)">Đăng Nhập</button>
+        <button class="secondary" onclick="submitAuth(true)">Tạo Tài Khoản Mới</button>
+        <p id="authMsg" style="color: #ff6b6b; text-align: center; font-size: 14px;"></p>
+    </div>
+
+    <div class="box hidden" id="lobbyBox">
+        <h2>Sảnh Tìm Đối Thủ</h2>
+        <div class="render-badge">
+            <div><strong>Tài khoản:</strong> <span id="myName"></span> | <strong>Điểm:</strong> <span id="myScore">0</span></div>
+            <div style="margin-top: 6px; color: #a0a0b0;">
+                <strong>Liên kết Server Render:</strong><br>
+                <a id="renderLink" href="#" target="_blank" style="color: #2ecc71;">Đang kết nối...</a>
+            </div>
+        </div>
+
+        <h4>Người chơi đang Online (Mở tab chính):</h4>
+        <div id="playerList"></div>
+        <p id="emptyMsg" style="color: #888; font-size: 14px; text-align: center;">Chưa có đối thủ nào khác đang mở web...</p>
+    </div>
+
+    <div class="invite-popup hidden" id="invitePopup">
+        <p id="inviteText" style="margin: 0 0 10px 0; font-weight: bold;"></p>
+        <button onclick="acceptInvite()">Chấp nhận đấu</button>
+        <button onclick="document.getElementById('invitePopup').classList.add('hidden')" style="background:#e74c3c;">Từ chối</button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let currentUser = sessionStorage.getItem('go_username') || '';
+        let pendingInviteFrom = null;
+
+        const linkEl = document.getElementById('renderLink');
+        linkEl.href = window.location.origin;
+        linkEl.innerText = window.location.origin;
+
+        if (currentUser) {
+            enterLobby(currentUser, sessionStorage.getItem('go_score') || 0);
+        }
+
+        function submitAuth(isRegister) {
+            const username = document.getElementById('usernameInput').value.trim();
+            const password = document.getElementById('passwordInput').value;
+            socket.emit('auth', { username, password, isRegister }, (res) => {
+                if (!res.ok) {
+                    document.getElementById('authMsg').innerText = res.msg;
+                    return;
+                }
+                sessionStorage.setItem('go_username', username);
+                sessionStorage.setItem('go_score', res.score);
+                enterLobby(username, res.score);
+            });
+        }
+
+        function enterLobby(username, score) {
+            currentUser = username;
+            document.getElementById('authBox').classList.add('hidden');
+            document.getElementById('lobbyBox').classList.remove('hidden');
+            document.getElementById('myName').innerText = username;
+            document.getElementById('myScore').innerText = score;
+            socket.emit('setTabActive', { username: currentUser, active: !document.hidden });
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (currentUser) {
+                socket.emit('setTabActive', { username: currentUser, active: !document.hidden });
+            }
+        });
+
+        socket.on('onlineList', (list) => {
+            const container = document.getElementById('playerList');
+            container.innerHTML = '';
+            const others = list.filter(p => p.username !== currentUser);
+            document.getElementById('emptyMsg').style.display = others.length ? 'none' : 'block';
+
+            others.forEach(player => {
+                const div = document.createElement('div');
+                div.className = 'player-item';
+                div.innerHTML = `<span>🟢 <strong>${player.username}</strong> (Bấm để mời)</span> <span class="score-tag">${player.score} điểm</span>`;
+                div.onclick = () => {
+                    socket.emit('sendInvite', { targetSocketId: player.socketId, fromUsername: currentUser });
+                    alert(`Đã gửi lời mời thách đấu tới ${player.username}!`);
+                };
+                container.appendChild(div);
+            });
+        });
+
+        socket.on('receiveInvite', ({ fromSocketId, fromUsername, fromScore }) => {
+            pendingInviteFrom = fromSocketId;
+            document.getElementById('inviteText').innerText = `⚔️ ${fromUsername} (${fromScore} điểm) mời bạn đấu Cờ Vây!`;
+            document.getElementById('invitePopup').classList.remove('hidden');
+        });
+
+        function acceptInvite() {
+            if (!pendingInviteFrom) return;
+            socket.emit('acceptInvite', { fromSocketId: pendingInviteFrom, myUsername: currentUser });
+        }
+
+        socket.on('gameStart', ({ roomId, color, opponent }) => {
+            sessionStorage.setItem('go_roomId', roomId);
+            sessionStorage.setItem('go_color', color);
+            sessionStorage.setItem('go_opponent', opponent);
+            window.location.href = '/index.html';
+        });
+    </script>
+</body>
+</html>
