@@ -5,31 +5,40 @@
     <title>Cài Đặt Game Cờ Vây</title>
     <style>
         body {
-            background: #1e1e26;
+            background: #1c1c24;
             color: #fff;
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 14px;
-            box-sizing: border-box;
+            user-select: none;
+        }
+        .owner-banner {
+            background: #14141b;
+            border-left: 3px solid #2ecc71;
+            padding: 7px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #a0a0b0;
+            margin-bottom: 12px;
         }
         .section {
-            background: #2b2b36;
-            padding: 12px;
+            background: #272733;
+            padding: 12px 14px;
             border-radius: 8px;
             margin-bottom: 12px;
-            border: 1px solid #3a3a4a;
+            border: 1px solid #383846;
         }
         .section h3 {
             margin: 0 0 8px 0;
             font-size: 14px;
-            color: #5dade2;
+            color: #f5b041;
         }
         .row {
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 8px;
-            margin-top: 6px;
+            margin: 6px 0;
             font-size: 13px;
         }
         input[type="range"] {
@@ -43,7 +52,7 @@
             max-width: 195px;
         }
         button {
-            padding: 5px 10px;
+            padding: 6px 11px;
             border: none;
             border-radius: 5px;
             font-weight: bold;
@@ -51,130 +60,146 @@
             font-size: 12px;
         }
         .btn-clear { background: #e74c3c; color: #fff; }
-        .status-text { font-size: 12px; color: #2ecc71; margin-top: 5px; }
+        .status-msg { font-size: 12px; color: #2ecc71; margin-top: 4px; }
     </style>
 </head>
 <body>
 
+    <div class="owner-banner">
+        Hồ sơ cài đặt độc lập của: <strong id="userDisplay" style="color:#fff;">guest</strong>
+    </div>
+
+    <!-- 1. Âm lượng hiệu ứng đặt quân -->
     <div class="section">
         <h3>🔊 1. Âm Lượng Hiệu Ứng Đặt Quân</h3>
         <div class="row">
-            <span>Âm lượng: <strong id="sfxLabel">100%</strong></span>
-            <input type="range" id="sfxRange" min="0" max="100" value="100" oninput="updateSfx(this.value)">
+            <span>Âm lượng: <strong id="sfxText">100%</strong></span>
+            <input type="range" id="sfxSlider" min="0" max="100" value="100">
         </div>
     </div>
 
+    <!-- 2. Nhạc nền tự chọn -->
     <div class="section">
         <h3>🎵 2. Nhạc Nền Game (Tự Chọn File)</h3>
         <div class="row">
-            <input type="file" id="bgmFile" accept="audio/*" onchange="uploadBgm(this)">
+            <input type="file" id="bgmFile" accept="audio/*">
             <button class="btn-clear" onclick="clearBgm()">Xóa nhạc</button>
         </div>
-        <div class="row" style="margin-top: 10px;">
-            <span>Âm lượng nhạc nền: <strong id="bgmLabel">50%</strong></span>
-            <input type="range" id="bgmRange" min="0" max="100" value="50" oninput="updateBgmVol(this.value)">
+        <div class="row" style="margin-top: 8px;">
+            <span>Âm lượng nhạc: <strong id="bgmText">60%</strong></span>
+            <input type="range" id="bgmSlider" min="0" max="100" value="60">
         </div>
-        <div class="status-text" id="bgmStatus"></div>
+        <div class="status-msg" id="bgmStatus"></div>
     </div>
 
+    <!-- 3. Hình nền Background bên ngoài -->
     <div class="section">
         <h3>🖼️ 3. Hình Nền (Background Bên Ngoài)</h3>
         <div class="row">
-            <input type="file" id="bgFile" accept="image/*" onchange="uploadBg(this)">
+            <input type="file" id="bgFile" accept="image/*">
             <button class="btn-clear" onclick="clearBg()">Mặc định</button>
         </div>
-        <div class="status-text" id="bgStatus"></div>
+        <div class="status-msg" id="bgStatus"></div>
     </div>
 
     <script>
-        function notifyParent() {
+        // Lấy đúng tên tài khoản của người chơi mở bảng này để lưu cài đặt độc lập
+        const params = new URLSearchParams(window.location.search);
+        const currentUser = params.get('user') || sessionStorage.getItem('go_username') || 'guest';
+        const USER_PREFIX = `go_cfg_${currentUser}_`;
+
+        document.getElementById('userDisplay').innerText = currentUser;
+
+        function notifyGame() {
             if (window.parent && window.parent !== window) {
-                window.parent.postMessage('settingsUpdated', '*');
-            }
-            if (window.opener && !window.opener.closed) {
-                window.opener.postMessage('settingsUpdated', '*');
+                window.parent.postMessage({ type: 'GO_SETTINGS_UPDATED', user: currentUser }, '*');
             }
         }
 
-        const savedSfx = localStorage.getItem('go_sfx_vol');
+        // Khôi phục cài đặt riêng của tài khoản này
+        const sfxSlider = document.getElementById('sfxSlider');
+        const sfxText = document.getElementById('sfxText');
+        const savedSfx = localStorage.getItem(USER_PREFIX + 'sfxVol');
         if (savedSfx !== null) {
-            document.getElementById('sfxRange').value = savedSfx;
-            document.getElementById('sfxLabel').innerText = savedSfx + '%';
+            sfxSlider.value = Math.round(Number(savedSfx) * 100);
+            sfxText.innerText = sfxSlider.value + '%';
         }
 
-        const savedBgmVol = localStorage.getItem('go_bgm_vol');
+        sfxSlider.addEventListener('input', () => {
+            sfxText.innerText = sfxSlider.value + '%';
+            localStorage.setItem(USER_PREFIX + 'sfxVol', sfxSlider.value / 100);
+            notifyGame();
+        });
+
+        const bgmSlider = document.getElementById('bgmSlider');
+        const bgmText = document.getElementById('bgmText');
+        const savedBgmVol = localStorage.getItem(USER_PREFIX + 'bgmVol');
         if (savedBgmVol !== null) {
-            document.getElementById('bgmRange').value = savedBgmVol;
-            document.getElementById('bgmLabel').innerText = savedBgmVol + '%';
+            bgmSlider.value = Math.round(Number(savedBgmVol) * 100);
+            bgmText.innerText = bgmSlider.value + '%';
+        }
+        if (localStorage.getItem(USER_PREFIX + 'bgmData')) {
+            document.getElementById('bgmStatus').innerText = '✅ Đã nạp nhạc nền riêng';
         }
 
-        if (localStorage.getItem('go_bgm_data')) {
-            document.getElementById('bgmStatus').innerText = '✅ Đang dùng file nhạc nền tùy chỉnh';
-        }
-        if (localStorage.getItem('go_custom_bg')) {
-            document.getElementById('bgStatus').innerText = '✅ Đã áp dụng ảnh nền tùy chỉnh';
-        }
+        bgmSlider.addEventListener('input', () => {
+            bgmText.innerText = bgmSlider.value + '%';
+            localStorage.setItem(USER_PREFIX + 'bgmVol', bgmSlider.value / 100);
+            notifyGame();
+        });
 
-        function updateSfx(val) {
-            document.getElementById('sfxLabel').innerText = val + '%';
-            localStorage.setItem('go_sfx_vol', val);
-            notifyParent();
-        }
-
-        function updateBgmVol(val) {
-            document.getElementById('bgmLabel').innerText = val + '%';
-            localStorage.setItem('go_bgm_vol', val);
-            notifyParent();
-        }
-
-        function uploadBgm(input) {
-            const file = input.files[0];
+        document.getElementById('bgmFile').addEventListener('change', (e) => {
+            const file = e.target.files[0];
             if (!file) return;
             if (file.size > 4.5 * 1024 * 1024) {
-                alert('File nhạc hơi lớn (> 4.5MB), hãy chọn file ngắn/nhẹ hơn để trình duyệt lưu mượt nhé!');
+                alert('File nhạc hơi lớn (>4.5MB), hãy chọn file nhẹ hơn để lưu mượt trên trình duyệt!');
                 return;
             }
             const reader = new FileReader();
             reader.onload = () => {
                 try {
-                    localStorage.setItem('go_bgm_data', reader.result);
-                    document.getElementById('bgmStatus').innerText = '✅ Đã bật nhạc nền: ' + file.name;
-                    notifyParent();
-                } catch (e) {
-                    alert('Bộ nhớ trình duyệt đầy, vui lòng chọn file nhạc dung lượng nhỏ hơn!');
+                    localStorage.setItem(USER_PREFIX + 'bgmData', reader.result);
+                    document.getElementById('bgmStatus').innerText = '✅ Đang phát: ' + file.name;
+                    notifyGame();
+                } catch (err) {
+                    alert('Bộ nhớ trình duyệt đầy, hãy chọn file nhạc dung lượng nhỏ hơn!');
                 }
             };
             reader.readAsDataURL(file);
-        }
+        });
 
         function clearBgm() {
-            localStorage.removeItem('go_bgm_data');
+            localStorage.removeItem(USER_PREFIX + 'bgmData');
             document.getElementById('bgmFile').value = '';
-            document.getElementById('bgmStatus').innerText = 'Đã tắt nhạc nền tùy chỉnh';
-            notifyParent();
+            document.getElementById('bgmStatus').innerText = 'Đã tắt nhạc nền';
+            notifyGame();
         }
 
-        function uploadBg(input) {
-            const file = input.files[0];
+        if (localStorage.getItem(USER_PREFIX + 'bgImg')) {
+            document.getElementById('bgStatus').innerText = '✅ Đã áp dụng ảnh nền riêng';
+        }
+
+        document.getElementById('bgFile').addEventListener('change', (e) => {
+            const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
             reader.onload = () => {
                 try {
-                    localStorage.setItem('go_custom_bg', reader.result);
-                    document.getElementById('bgStatus').innerText = '✅ Đã áp dụng ảnh nền tùy chỉnh';
-                    notifyParent();
-                } catch (e) {
-                    alert('Ảnh nền dung lượng quá lớn, hãy chọn ảnh nhẹ hơn (< 4MB)!');
+                    localStorage.setItem(USER_PREFIX + 'bgImg', reader.result);
+                    document.getElementById('bgStatus').innerText = '✅ Đã đổi nền: ' + file.name;
+                    notifyGame();
+                } catch (err) {
+                    alert('Ảnh nền quá nặng, hãy chọn ảnh nhẹ hơn (<3MB)!');
                 }
             };
             reader.readAsDataURL(file);
-        }
+        });
 
         function clearBg() {
-            localStorage.removeItem('go_custom_bg');
+            localStorage.removeItem(USER_PREFIX + 'bgImg');
             document.getElementById('bgFile').value = '';
-            document.getElementById('bgStatus').innerText = 'Đã khôi phục nền mặc định';
-            notifyParent();
+            document.getElementById('bgStatus').innerText = 'Đã về nền mặc định';
+            notifyGame();
         }
     </script>
 </body>

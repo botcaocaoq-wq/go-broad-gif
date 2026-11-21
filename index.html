@@ -17,6 +17,7 @@
             margin: 10px;
             user-select: none;
             min-height: 96vh;
+            transition: background-image 0.3s ease;
         }
         .hud {
             display: flex;
@@ -24,33 +25,47 @@
             gap: 10px;
             align-items: center;
             justify-content: center;
-            background: rgba(35, 35, 46, 0.92);
-            padding: 8px 16px;
-            border-radius: 8px;
+            background: rgba(30, 30, 40, 0.92);
+            backdrop-filter: blur(6px);
+            padding: 8px 14px;
+            border-radius: 10px;
             margin-bottom: 10px;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.6);
-            backdrop-filter: blur(4px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.08);
         }
-        .stat-box { background: #14141b; padding: 6px 12px; border-radius: 6px; font-size: 14px; border: 1px solid #333; }
+        .stat-box {
+            background: #14141b;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
         .clock-box {
+            background: #14141b;
             padding: 6px 14px;
             border-radius: 6px;
             font-size: 15px;
             font-weight: bold;
-            background: #14141b;
-            border: 2px solid #333;
+            border: 2px solid transparent;
             transition: 0.2s;
         }
-        .clock-active { border-color: #f5b041; color: #f5b041; box-shadow: 0 0 10px rgba(245,176,65,0.35); }
-        .clock-danger {
-            border-color: #e74c3c !important;
-            background: #5c1916 !important;
-            color: #fff !important;
-            animation: pulseRed 0.7s infinite alternate;
+        .clock-active {
+            border-color: #f5b041;
+            color: #f5b041;
+            box-shadow: 0 0 10px rgba(245, 176, 65, 0.25);
         }
-        @keyframes pulseRed {
-            from { transform: scale(1); }
-            to { transform: scale(1.05); }
+        .clock-danger {
+            background: #c0392b !important;
+            border-color: #ff7675 !important;
+            color: #fff !important;
+            animation: pulse 0.8s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.04); }
+            100% { transform: scale(1); }
         }
         canvas {
             box-shadow: 0 12px 35px rgba(0,0,0,0.85);
@@ -59,46 +74,80 @@
             max-height: 78vh;
             border-radius: 8px;
         }
-        button { padding: 7px 13px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        button {
+            padding: 7px 13px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button:hover { opacity: 0.88; }
         .btn-pass { background: #f39c12; color: #000; }
         .btn-resign { background: #e74c3c; color: #fff; }
-        .btn-setting-corner {
+
+        /* Nút Setting cố định ở góc dưới bên phải */
+        .setting-fab {
             position: fixed;
-            bottom: 16px;
-            right: 16px;
-            width: 48px;
-            height: 48px;
+            bottom: 18px;
+            right: 18px;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
             background: #2b2b36;
             color: #f5b041;
-            border: 2px solid #f5b041;
-            font-size: 22px;
+            font-size: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.7);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.65);
+            border: 2px solid #f5b041;
+            cursor: pointer;
             z-index: 950;
-            transition: transform 0.2s;
+            transition: transform 0.25s;
         }
-        .btn-setting-corner:hover { transform: rotate(45deg) scale(1.08); }
-        .setting-popup {
+        .setting-fab:hover {
+            transform: rotate(45deg) scale(1.08);
+        }
+
+        /* Khung Setting nổi trực tiếp trên trang (nhúng index2.html) */
+        .setting-modal {
             position: fixed;
-            bottom: 76px;
-            right: 16px;
-            width: 390px;
-            height: 440px;
+            bottom: 80px;
+            right: 18px;
+            width: 380px;
             max-width: 92vw;
-            max-height: 80vh;
-            background: #1e1e26;
+            height: 460px;
+            max-height: 78vh;
+            background: #22222c;
             border: 2px solid #f5b041;
             border-radius: 12px;
-            box-shadow: 0 10px 35px rgba(0,0,0,0.85);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.85);
             z-index: 960;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
-        .setting-popup iframe { width: 100%; height: 100%; border: none; }
+        .setting-modal-header {
+            background: #181820;
+            padding: 8px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #383846;
+            font-size: 14px;
+            font-weight: bold;
+            color: #f5b041;
+        }
+        .setting-modal iframe {
+            width: 100%;
+            flex: 1;
+            border: none;
+            background: #1c1c24;
+        }
+
         .overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.9);
+            position: fixed; inset: 0; background: rgba(0,0,0,0.88);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             z-index: 1000; text-align: center;
         }
@@ -108,132 +157,179 @@
 <body>
 
     <div class="hud">
-        <div class="stat-box" id="playerLabel">Chế độ: 2 người (1 máy)</div>
-        <div class="clock-box clock-active" id="blackClockBox">⚫ Đen: 05:00</div>
-        <div class="clock-box" id="whiteClockBox">⚪ Trắng: 05:00</div>
+        <div class="stat-box" id="playerLabel">Chế độ: Chơi thử 2 người</div>
+        <div class="clock-box clock-active" id="clockBlack">⚫ Đen: 05:00</div>
+        <div class="clock-box" id="clockWhite">⚪ Trắng: 05:00</div>
         <div class="stat-box">Tù binh — Đen: <strong id="blackCap">0</strong> | Trắng: <strong id="whiteCap">0</strong></div>
-        <button class="btn-pass" onclick="handlePass()">Bỏ Lượt</button>
+        <button class="btn-pass" onclick="handlePass()">Bỏ Lượt (Pass)</button>
         <button class="btn-resign" onclick="handleResign()">Đầu Hàng</button>
     </div>
 
-    <canvas id="goCanvas" width="1000" height="1000"></canvas>
+    <canvas id="goCanvas" width="900" height="900"></canvas>
 
-    <!-- NÚT MỞ BẢNG SETTING GÓC DƯỚI PHẢI -->
-    <button class="btn-setting-corner" title="Cài đặt âm thanh & giao diện" onclick="toggleSettingPanel()">⚙️</button>
+    <!-- Nút mở bảng Setting góc dưới bên phải -->
+    <button class="setting-fab" onclick="toggleSettingPanel()" title="Cài đặt cá nhân">⚙️</button>
 
-    <!-- KHUNG SETTING NỔI TẠI CHỖ (LOAD INDEX2.HTML) -->
-    <div class="setting-popup hidden" id="settingPopup">
-        <iframe src="/index2.html" id="settingFrame"></iframe>
+    <!-- Cửa sổ Setting nổi tại chỗ (không tách ra cửa sổ rời) -->
+    <div class="setting-modal hidden" id="settingModal">
+        <div class="setting-modal-header">
+            <span id="settingOwnerLabel">⚙️ Cài đặt cá nhân</span>
+            <button onclick="toggleSettingPanel()" style="background:#e74c3c; color:#fff; padding:3px 9px; font-size:12px;">Đóng ✕</button>
+        </div>
+        <iframe id="settingFrame" src="about:blank"></iframe>
     </div>
 
-    <!-- MÀN HÌNH KẾT THÚC -->
     <div class="overlay hidden" id="endOverlay">
         <h1 id="endTitle" style="font-size: 46px; margin-bottom: 8px;"></h1>
         <p id="endReason" style="font-size: 19px; color: #ccc; margin-bottom: 24px;"></p>
         <button onclick="exitMatch()" style="padding: 12px 26px; font-size: 16px; background: #2ecc71; color: #000;">Quay về sảnh</button>
     </div>
 
+    <audio id="bgmPlayer" loop></audio>
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const canvas = document.getElementById('goCanvas');
         const ctx = canvas.getContext('2d');
         const GRID_SIZE = 9;
-        const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
-        const INITIAL_TIME = 300; // 5 phút = 300 giây
 
-        const username = sessionStorage.getItem('go_username');
+        const username = sessionStorage.getItem('go_username') || 'guest';
         const roomId = sessionStorage.getItem('go_roomId');
         const myColor = Number(sessionStorage.getItem('go_color') || 0);
         const opponent = sessionStorage.getItem('go_opponent') || 'Đối thủ';
-        const isOnline = Boolean(username && roomId && typeof io !== 'undefined');
+        const isOnline = Boolean(sessionStorage.getItem('go_username') && roomId && typeof io !== 'undefined');
         const socket = isOnline ? io() : null;
 
+        // Khóa lưu cài đặt RIÊNG BIỆT cho từng tài khoản người chơi
+        const USER_PREFIX = `go_cfg_${username}_`;
+
         if (isOnline) {
-            document.getElementById('playerLabel').innerText = `${username} (${myColor === 1 ? 'Đen' : 'Trắng'}) vs ${opponent}`;
+            document.getElementById('playerLabel').innerText = `Bạn: ${username} (${myColor === 1 ? 'Đen' : 'Trắng'}) vs ${opponent}`;
+        }
+        document.getElementById('settingOwnerLabel').innerText = `⚙️ Cài đặt riêng: ${username}`;
+
+        // --- MỞ / ĐÓNG BẢNG SETTING ĐỘC LẬP CHO TỪNG TÀI KHOẢN ---
+        function toggleSettingPanel() {
+            const modal = document.getElementById('settingModal');
+            const frame = document.getElementById('settingFrame');
+            const isHidden = modal.classList.contains('hidden');
+            if (isHidden) {
+                // Truyền tên tài khoản vào URL để index2.html tải đúng cấu hình riêng của người đó
+                const targetUrl = `/index2.html?user=${encodeURIComponent(username)}`;
+                if (!frame.src.includes(targetUrl)) {
+                    frame.src = targetUrl;
+                }
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
         }
 
-        // --- QUẢN LÝ SETTING (ÂM LƯỢNG, NHẠC NỀN, BACKGROUND) ---
-        let sfxVolume = Number(localStorage.getItem('go_sfx_vol') ?? 100) / 100;
-        let bgmVolume = Number(localStorage.getItem('go_bgm_vol') ?? 60) / 100;
-        const bgmAudio = new Audio();
-        bgmAudio.loop = true;
+        // --- HỆ THỐNG CÀI ĐẶT RIÊNG (ÂM LƯỢNG, NHẠC NỀN, BACKGROUND) ---
+        let sfxVolume = 1.0;
+        let bgmVolume = 0.6;
+        const bgmPlayer = document.getElementById('bgmPlayer');
 
-        function applySavedSettings() {
-            sfxVolume = Number(localStorage.getItem('go_sfx_vol') ?? 100) / 100;
-            bgmVolume = Number(localStorage.getItem('go_bgm_vol') ?? 60) / 100;
-            bgmAudio.volume = bgmVolume;
+        function applyPersonalSettings() {
+            const savedSfx = localStorage.getItem(USER_PREFIX + 'sfxVol');
+            if (savedSfx !== null) sfxVolume = Number(savedSfx);
 
-            const savedBg = localStorage.getItem('go_custom_bg');
-            if (savedBg) {
-                document.body.style.backgroundImage = `url('${savedBg}')`;
+            const savedBgmVol = localStorage.getItem(USER_PREFIX + 'bgmVol');
+            if (savedBgmVol !== null) {
+                bgmVolume = Number(savedBgmVol);
+                bgmPlayer.volume = bgmVolume;
+            }
+
+            const savedBgmData = localStorage.getItem(USER_PREFIX + 'bgmData');
+            if (savedBgmData) {
+                if (bgmPlayer.src !== savedBgmData) {
+                    bgmPlayer.src = savedBgmData;
+                }
+                bgmPlayer.play().catch(() => {});
+            } else {
+                bgmPlayer.pause();
+                bgmPlayer.removeAttribute('src');
+            }
+
+            const savedBgImg = localStorage.getItem(USER_PREFIX + 'bgImg');
+            if (savedBgImg) {
+                document.body.style.backgroundImage = `url('${savedBgImg}')`;
             } else {
                 document.body.style.backgroundImage = 'none';
             }
-
-            const savedBgm = localStorage.getItem('go_custom_bgm');
-            if (savedBgm && bgmAudio.src !== savedBgm) {
-                bgmAudio.src = savedBgm;
-                bgmAudio.play().catch(() => {});
-            } else if (!savedBgm) {
-                bgmAudio.pause();
-                bgmAudio.removeAttribute('src');
-            }
-        }
-        applySavedSettings();
-
-        function toggleSettingPanel() {
-            const box = document.getElementById('settingPopup');
-            box.classList.toggle('hidden');
         }
 
-        window.addEventListener('message', (e) => {
-            if (!e.data || typeof e.data !== 'object') return;
-            if (e.data.type === 'updateSettings') {
-                applySavedSettings();
-                if (e.data.testSfx) playMoveSound();
-            } else if (e.data.type === 'closeSettings') {
-                document.getElementById('settingPopup').classList.add('hidden');
+        // Nhận tín hiệu cập nhật trực tiếp từ iframe index2.html (chỉ áp dụng nếu đúng tài khoản của tab này)
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'GO_SETTINGS_UPDATED') {
+                if (!event.data.user || event.data.user === username) {
+                    applyPersonalSettings();
+                }
             }
         });
 
+        applyPersonalSettings();
+
         // --- ÂM THANH ĐẶT QUÂN ---
-        const moveSound = new Audio('/sound.mp3');
+        const moveAudio = new Audio('/sound.mp3');
+        moveAudio.preload = 'auto';
+        let audioUnlocked = false;
         let audioCtx = null;
 
         function unlockAudio() {
-            if (!audioCtx) {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                if (AudioContext) audioCtx = new AudioContext();
+            if (!audioUnlocked) {
+                moveAudio.play().then(() => {
+                    moveAudio.pause();
+                    moveAudio.currentTime = 0;
+                    audioUnlocked = true;
+                }).catch(() => {});
+                if (!audioCtx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) audioCtx = new AudioContext();
+                }
+                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
             }
-            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-            if (bgmAudio.src && bgmAudio.paused) bgmAudio.play().catch(() => {});
+            if (bgmPlayer.src && bgmPlayer.paused) {
+                bgmPlayer.play().catch(() => {});
+            }
         }
-        document.addEventListener('pointerdown', unlockAudio, { once: true });
+        document.addEventListener('pointerdown', unlockAudio);
 
-        function playSynthClack() {
+        function playStoneSound() {
             if (sfxVolume <= 0) return;
-            unlockAudio();
-            if (!audioCtx) return;
-            const now = audioCtx.currentTime;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(920, now);
-            osc.frequency.exponentialRampToValueAtTime(160, now + 0.055);
-            gain.gain.setValueAtTime(0.8 * sfxVolume, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start(now);
-            osc.stop(now + 0.065);
+            try {
+                moveAudio.volume = sfxVolume;
+                moveAudio.currentTime = 0;
+                const p = moveAudio.play();
+                if (p !== undefined) {
+                    p.catch(() => playSynthClick());
+                }
+            } catch (e) {
+                playSynthClick();
+            }
         }
 
-        function playMoveSound() {
-            if (sfxVolume <= 0) return;
-            moveSound.volume = sfxVolume;
-            moveSound.currentTime = 0;
-            const p = moveSound.play();
-            if (p !== undefined) p.catch(() => playSynthClack());
+        function playSynthClick() {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                if (!audioCtx) audioCtx = new AudioContext();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(850, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(160, audioCtx.currentTime + 0.045);
+
+                gain.gain.setValueAtTime(0.45 * sfxVolume, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.045);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.05);
+            } catch (err) {}
         }
 
         // --- TRẠNG THÁI VÁN CỜ & ĐỒNG HỒ 5 PHÚT ---
@@ -244,102 +340,117 @@
         let lastMove = null;
         let passCount = 0;
         let isGameOver = false;
-        let hoverPoint = null;
 
-        // Quỹ thời gian (giây) & mốc đồng bộ server/local
-        let timeLeft = { 1: INITIAL_TIME, 2: INITIAL_TIME };
-        let lastTurnStartTimestamp = Date.now();
-
-        // Lưu/Khôi phục trạng thái offline khi F5
+        let timeLeft = { 1: 300, 2: 300 };
+        let lastTickTime = Date.now();
         const LOCAL_STATE_KEY = 'go_local_match_state_v2';
-        function saveLocalState() {
+
+        function saveOfflineState() {
             if (isOnline || isGameOver) return;
             localStorage.setItem(LOCAL_STATE_KEY, JSON.stringify({
                 board, prevBoard, currentTurn, captures, lastMove, passCount,
-                timeLeft, lastTurnStartTimestamp
+                timeLeft, savedAt: Date.now()
             }));
         }
 
-        function loadLocalState() {
+        function loadOfflineState() {
             if (isOnline) return;
             try {
                 const raw = localStorage.getItem(LOCAL_STATE_KEY);
                 if (!raw) return;
-                const s = JSON.parse(raw);
-                if (s && s.board && s.timeLeft) {
-                    board = s.board;
-                    prevBoard = s.prevBoard;
-                    currentTurn = s.currentTurn;
-                    captures = s.captures;
-                    lastMove = s.lastMove;
-                    passCount = s.passCount;
-                    timeLeft = s.timeLeft;
-                    lastTurnStartTimestamp = s.lastTurnStartTimestamp || Date.now();
+                const st = JSON.parse(raw);
+                if (st && st.board) {
+                    board = st.board;
+                    prevBoard = st.prevBoard;
+                    currentTurn = st.currentTurn || 1;
+                    captures = st.captures || { 1: 0, 2: 0 };
+                    lastMove = st.lastMove || null;
+                    passCount = st.passCount || 0;
+                    timeLeft = st.timeLeft || { 1: 300, 2: 300 };
+                    const elapsed = (Date.now() - (st.savedAt || Date.now())) / 1000;
+                    timeLeft[currentTurn] = Math.max(0, timeLeft[currentTurn] - elapsed);
                 }
-            } catch (err) {}
+            } catch (e) {}
         }
-        loadLocalState();
 
-        function formatClock(sec) {
+        if (!isOnline) loadOfflineState();
+
+        function formatTime(sec) {
             const s = Math.max(0, Math.ceil(sec));
-            if (s <= 30 && s > 0) return `⏳ Đếm ngược: ${s}s`;
             const m = Math.floor(s / 60);
-            const rem = s % 60;
-            return `${String(m).padStart(2, '0')}:${String(rem).padStart(2, '0')}`;
+            const r = s % 60;
+            return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
         }
 
-        function renderClocks() {
-            const elapsed = (Date.now() - lastTurnStartTimestamp) / 1000;
-            let liveBlack = currentTurn === 1 && !isGameOver ? Math.max(0, timeLeft[1] - elapsed) : timeLeft[1];
-            let liveWhite = currentTurn === 2 && !isGameOver ? Math.max(0, timeLeft[2] - elapsed) : timeLeft[2];
+        function updateClocksUI() {
+            const elB = document.getElementById('clockBlack');
+            const elW = document.getElementById('clockWhite');
 
-            const bBox = document.getElementById('blackClockBox');
-            const wBox = document.getElementById('whiteClockBox');
+            const t1 = Math.ceil(timeLeft[1]);
+            const t2 = Math.ceil(timeLeft[2]);
 
-            bBox.innerText = `⚫ Đen: ${formatClock(liveBlack)}`;
-            wBox.innerText = `⚪ Trắng: ${formatClock(liveWhite)}`;
+            elB.innerText = (currentTurn === 1 && t1 <= 30 && t1 > 0)
+                ? `⚫ Đen: Đếm ngược ${t1}s`
+                : `⚫ Đen: ${formatTime(t1)}`;
 
-            bBox.className = 'clock-box' + (!isGameOver && currentTurn === 1 ? ' clock-active' : '') + (!isGameOver && currentTurn === 1 && liveBlack <= 30 ? ' clock-danger' : '');
-            wBox.className = 'clock-box' + (!isGameOver && currentTurn === 2 ? ' clock-active' : '') + (!isGameOver && currentTurn === 2 && liveWhite <= 30 ? ' clock-danger' : '');
+            elW.innerText = (currentTurn === 2 && t2 <= 30 && t2 > 0)
+                ? `⚪ Trắng: Đếm ngược ${t2}s`
+                : `⚪ Trắng: ${formatTime(t2)}`;
 
-            // Kiểm tra hết giờ ngay trên client (kể cả khi mạng trễ hoặc đang chơi 1 máy)
-            if (!isGameOver) {
-                if (currentTurn === 1 && liveBlack <= 0) {
-                    timeLeft[1] = 0;
-                    triggerTimeoutEnd(2, 1);
-                } else if (currentTurn === 2 && liveWhite <= 0) {
-                    timeLeft[2] = 0;
-                    triggerTimeoutEnd(1, 2);
+            elB.className = 'clock-box' + (currentTurn === 1 ? (t1 <= 30 ? ' clock-danger' : ' clock-active') : '');
+            elW.className = 'clock-box' + (currentTurn === 2 ? (t2 <= 30 ? ' clock-danger' : ' clock-active') : '');
+        }
+
+        const timerInterval = setInterval(() => {
+            if (isGameOver) return;
+            const now = Date.now();
+            const dt = (now - lastTickTime) / 1000;
+            lastTickTime = now;
+
+            timeLeft[currentTurn] = Math.max(0, timeLeft[currentTurn] - dt);
+            updateClocksUI();
+
+            if (!isOnline) saveOfflineState();
+
+            if (timeLeft[currentTurn] <= 0) {
+                isGameOver = true;
+                clearInterval(timerInterval);
+                localStorage.removeItem(LOCAL_STATE_KEY);
+
+                if (isOnline) {
+                    socket.emit('claimTimeout', { roomId, loserColor: currentTurn });
+                    const isWin = myColor !== currentTurn;
+                    showEndScreen(
+                        isWin ? 'CHIẾN THẮNG! (+1 ĐIỂM)' : 'THẤT BẠI!',
+                        `${currentTurn === 1 ? 'Quân Đen' : 'Quân Trắng'} đã hết 5 phút thi đấu!`,
+                        isWin
+                    );
+                    setTimeout(exitMatch, 3500);
+                } else {
+                    const winnerText = currentTurn === 1 ? 'QUÂN TRẮNG THẮNG!' : 'QUÂN ĐEN THẮNG!';
+                    showEndScreen(
+                        winnerText,
+                        `${currentTurn === 1 ? 'Quân Đen' : 'Quân Trắng'} đã hết thời gian 5 phút!`,
+                        true
+                    );
                 }
             }
-        }
+        }, 250);
 
-        function triggerTimeoutEnd(winnerColor, loserColor) {
-            if (isGameOver) return;
-            isGameOver = true;
-            localStorage.removeItem(LOCAL_STATE_KEY);
-            if (isOnline) {
-                socket.emit('claimTimeout', { roomId, loserColor });
-            } else {
-                const winText = winnerColor === 1 ? 'QUÂN ĐEN THẮNG!' : 'QUÂN TRẮNG THẮNG!';
-                const loseName = loserColor === 1 ? 'Quân Đen' : 'Quân Trắng';
-                showEndScreen(winText, `${loseName} đã hết 5 phút thời gian!`, true);
-            }
-        }
-
-        // Vòng lặp cập nhật đồng hồ mượt mỗi 200ms
-        setInterval(renderClocks, 200);
-
-        // --- VẼ BÀN CỜ GỖ 9x9 ---
+        // --- TẢI VÂN GỖ WOOD.PNG & VẼ BÀN CỜ 9x9 ---
         const woodImg = new Image();
         let woodLoaded = false;
         woodImg.onload = () => { woodLoaded = true; drawBoard(); };
         woodImg.src = '/wood.png';
 
         const MARGIN = 115;
-        const BOARD_SPAN = canvas.width - MARGIN * 2;
-        const STEP = BOARD_SPAN / (GRID_SIZE - 1);
-        const STONE_RADIUS = STEP * 0.43;
+        const BOARD_PX = canvas.width - MARGIN * 2;
+        const STEP = BOARD_PX / (GRID_SIZE - 1);
+        const STONE_RADIUS = STEP * 0.44;
+        const COLS_LABEL = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+        const HOSHI_POINTS = [[2, 2], [6, 2], [4, 4], [2, 6], [6, 6]];
+
+        let hoverPoint = null;
 
         function getCoord(col, row) {
             return { x: MARGIN + col * STEP, y: MARGIN + row * STEP };
@@ -351,14 +462,14 @@
             ctx.arc(x, y, STONE_RADIUS, 0, Math.PI * 2);
 
             if (isGhost) {
-                ctx.fillStyle = color === 1 ? 'rgba(20, 20, 20, 0.4)' : 'rgba(250, 250, 250, 0.55)';
+                ctx.fillStyle = color === 1 ? 'rgba(20, 20, 20, 0.42)' : 'rgba(250, 250, 250, 0.58)';
                 ctx.fill();
                 ctx.lineWidth = 2;
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
                 ctx.stroke();
             } else {
                 ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
-                ctx.shadowBlur = STONE_RADIUS * 0.28;
+                ctx.shadowBlur = STONE_RADIUS * 0.25;
                 ctx.shadowOffsetX = STONE_RADIUS * 0.1;
                 ctx.shadowOffsetY = STONE_RADIUS * 0.14;
 
@@ -368,11 +479,11 @@
                 );
                 if (color === 1) {
                     grad.addColorStop(0, '#555555');
-                    grad.addColorStop(0.35, '#1c1c1c');
+                    grad.addColorStop(0.3, '#1c1c1c');
                     grad.addColorStop(1, '#050505');
                 } else {
                     grad.addColorStop(0, '#ffffff');
-                    grad.addColorStop(0.75, '#eaeaea');
+                    grad.addColorStop(0.75, '#ebebeb');
                     grad.addColorStop(1, '#bdbdbd');
                 }
                 ctx.fillStyle = grad;
@@ -383,53 +494,51 @@
 
         function drawBoard() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
             if (woodLoaded) {
                 ctx.drawImage(woodImg, 0, 0, canvas.width, canvas.height);
             } else {
-                ctx.fillStyle = '#d4a359';
+                ctx.fillStyle = '#d49a5a';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
 
-            const outerPad = 46;
             ctx.save();
             ctx.strokeStyle = '#1a120b';
-            ctx.lineWidth = 4;
-            ctx.strokeRect(MARGIN - outerPad, MARGIN - outerPad, BOARD_SPAN + outerPad * 2, BOARD_SPAN + outerPad * 2);
+            ctx.lineWidth = 2.5;
+            ctx.strokeRect(MARGIN, MARGIN, BOARD_PX, BOARD_PX);
 
-            ctx.lineWidth = 2.4;
-            for (let i = 0; i < GRID_SIZE; i++) {
+            ctx.lineWidth = 1.6;
+            for (let i = 1; i < GRID_SIZE - 1; i++) {
                 const pos = MARGIN + i * STEP;
                 ctx.beginPath();
-                ctx.moveTo(MARGIN, pos);
-                ctx.lineTo(MARGIN + BOARD_SPAN, pos);
+                ctx.moveTo(pos, MARGIN);
+                ctx.lineTo(pos, MARGIN + BOARD_PX);
                 ctx.stroke();
 
                 ctx.beginPath();
-                ctx.moveTo(pos, MARGIN);
-                ctx.lineTo(pos, MARGIN + BOARD_SPAN);
+                ctx.moveTo(MARGIN, pos);
+                ctx.lineTo(MARGIN + BOARD_PX, pos);
                 ctx.stroke();
             }
 
-            const starPoints = [[2, 2], [6, 2], [4, 4], [2, 6], [6, 6]];
             ctx.fillStyle = '#1a120b';
-            for (const [sc, sr] of starPoints) {
-                const pt = getCoord(sc, sr);
+            for (const [hc, hr] of HOSHI_POINTS) {
+                const pt = getCoord(hc, hr);
                 ctx.beginPath();
-                ctx.arc(pt.x, pt.y, 6.5, 0, Math.PI * 2);
+                ctx.arc(pt.x, pt.y, 5.5, 0, Math.PI * 2);
                 ctx.fill();
             }
 
-            ctx.fillStyle = '#1a120b';
-            ctx.font = 'bold 21px Arial';
+            ctx.font = 'bold 20px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             for (let i = 0; i < GRID_SIZE; i++) {
                 const pos = MARGIN + i * STEP;
-                ctx.fillText(LETTERS[i], pos, MARGIN - outerPad - 22);
-                ctx.fillText(LETTERS[i], pos, MARGIN + BOARD_SPAN + outerPad + 22);
+                ctx.fillText(COLS_LABEL[i], pos, MARGIN - 45);
+                ctx.fillText(COLS_LABEL[i], pos, MARGIN + BOARD_PX + 45);
                 const rowNum = String(GRID_SIZE - i);
-                ctx.fillText(rowNum, MARGIN - outerPad - 24, pos);
-                ctx.fillText(rowNum, MARGIN + BOARD_SPAN + outerPad + 24, pos);
+                ctx.fillText(rowNum, MARGIN - 45, pos);
+                ctx.fillText(rowNum, MARGIN + BOARD_PX + 45, pos);
             }
             ctx.restore();
 
@@ -447,7 +556,7 @@
 
                         if (lastMove && lastMove.col === c && lastMove.row === r) {
                             ctx.beginPath();
-                            ctx.arc(pt.x, pt.y, STONE_RADIUS * 0.25, 0, Math.PI * 2);
+                            ctx.arc(pt.x, pt.y, STONE_RADIUS * 0.24, 0, Math.PI * 2);
                             ctx.fillStyle = '#e74c3c';
                             ctx.fill();
                         }
@@ -456,17 +565,23 @@
             }
         }
 
-        function getNearestCell(clientX, clientY) {
+        function getNearestIntersection(clientX, clientY) {
             const rect = canvas.getBoundingClientRect();
-            const x = (clientX - rect.left) * (canvas.width / rect.width);
-            const y = (clientY - rect.top) * (canvas.height / rect.height);
-            const minBound = MARGIN - STEP * 0.75;
-            const maxBound = MARGIN + BOARD_SPAN + STEP * 0.75;
-            if (x < minBound || x > maxBound || y < minBound || y > maxBound) return null;
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (clientX - rect.left) * scaleX;
+            const y = (clientY - rect.top) * scaleY;
 
-            const col = Math.max(0, Math.min(GRID_SIZE - 1, Math.round((x - MARGIN) / STEP)));
-            const row = Math.max(0, Math.min(GRID_SIZE - 1, Math.round((y - MARGIN) / STEP)));
-            return { col, row };
+            const col = Math.round((x - MARGIN) / STEP);
+            const row = Math.round((y - MARGIN) / STEP);
+
+            if (col >= 0 && col < GRID_SIZE && row >= 0 && row < GRID_SIZE) {
+                const pt = getCoord(col, row);
+                if (Math.hypot(x - pt.x, y - pt.y) <= STEP * 0.75) {
+                    return { col, row };
+                }
+            }
+            return null;
         }
 
         canvas.addEventListener('mousemove', (e) => {
@@ -474,9 +589,9 @@
                 hoverPoint = null;
                 return;
             }
-            const cell = getNearestCell(e.clientX, e.clientY);
-            if (JSON.stringify(cell) !== JSON.stringify(hoverPoint)) {
-                hoverPoint = cell;
+            const nearest = getNearestIntersection(e.clientX, e.clientY);
+            if (JSON.stringify(nearest) !== JSON.stringify(hoverPoint)) {
+                hoverPoint = nearest;
                 drawBoard();
             }
         });
@@ -487,29 +602,24 @@
         });
 
         canvas.addEventListener('click', (e) => {
-            if (isGameOver || (isOnline && currentTurn !== myColor)) return;
-            const cell = getNearestCell(e.clientX, e.clientY);
-            if (!cell) return;
+            if (isGameOver) return;
+            unlockAudio();
+            if (isOnline && currentTurn !== myColor) return;
+            const nearest = getNearestIntersection(e.clientX, e.clientY);
+            if (!nearest) return;
 
             if (isOnline) {
-                socket.emit('playMove', { roomId, col: cell.col, row: cell.row, username });
+                socket.emit('playMove', { roomId, col: nearest.col, row: nearest.row, username });
             } else {
-                const res = executeMove(cell.col, cell.row, currentTurn);
+                const res = executeMove(nearest.col, nearest.row, currentTurn);
                 if (!res.ok) return alert(res.msg);
-                playMoveSound();
+                playStoneSound();
                 hoverPoint = null;
+                lastTickTime = Date.now();
                 updateUI();
                 drawBoard();
-
-                if (!hasAnyLegalMove(currentTurn)) {
-                    isGameOver = true;
-                    localStorage.removeItem(LOCAL_STATE_KEY);
-                    const winnerText = currentTurn === 1 ? 'QUÂN TRẮNG THẮNG!' : 'QUÂN ĐEN THẮNG!';
-                    const loserName = currentTurn === 1 ? 'Quân Đen' : 'Quân Trắng';
-                    showEndScreen(winnerText, `${loserName} không còn nước đi hợp lệ!`, true);
-                } else {
-                    saveLocalState();
-                }
+                saveOfflineState();
+                checkNoLegalMovesOffline();
             }
         });
 
@@ -543,9 +653,9 @@
             return { group, liberties: liberties.size };
         }
 
-        function simulateMove(srcBoard, srcPrevBoard, col, row, color) {
-            if (srcBoard[col][row] !== 0) return { ok: false, msg: 'Giao điểm này đã có quân!' };
-            const nextBoard = cloneBoard(srcBoard);
+        function simulateMove(targetBoard, targetPrevBoard, col, row, color) {
+            if (targetBoard[col][row] !== 0) return { ok: false, msg: 'Giao điểm này đã có quân!' };
+            const nextBoard = cloneBoard(targetBoard);
             nextBoard[col][row] = color;
             const enemy = color === 1 ? 2 : 1;
             let capturedCount = 0;
@@ -562,16 +672,23 @@
             }
 
             const selfGroup = getGroupAndLiberties(nextBoard, col, row);
-            if (capturedCount === 0 && selfGroup.liberties === 0) return { ok: false, msg: 'Phạm luật: Điểm tự sát!' };
-            if (isSameBoard(nextBoard, srcPrevBoard)) return { ok: false, msg: 'Phạm luật Cướp cờ (Ko)!' };
-
+            if (capturedCount === 0 && selfGroup.liberties === 0) {
+                return { ok: false, msg: 'Phạm luật: Nước đi tự sát!' };
+            }
+            if (isSameBoard(nextBoard, targetPrevBoard)) {
+                return { ok: false, msg: 'Phạm luật Cướp cờ (Ko)!' };
+            }
             return { ok: true, nextBoard, capturedCount };
         }
 
-        function hasAnyLegalMove(color) {
+        function hasAnyLegalMove(targetBoard, targetPrevBoard, color) {
             for (let c = 0; c < GRID_SIZE; c++) {
                 for (let r = 0; r < GRID_SIZE; r++) {
-                    if (board[c][r] === 0 && simulateMove(board, prevBoard, c, r, color).ok) return true;
+                    if (targetBoard[c][r] === 0) {
+                        if (simulateMove(targetBoard, targetPrevBoard, c, r, color).ok) {
+                            return true;
+                        }
+                    }
                 }
             }
             return false;
@@ -581,11 +698,6 @@
             const sim = simulateMove(board, prevBoard, col, row, color);
             if (!sim.ok) return sim;
 
-            // Chốt thời gian đã tiêu hao của người vừa đánh và chuyển đồng hồ sang đối thủ
-            const elapsed = (Date.now() - lastTurnStartTimestamp) / 1000;
-            timeLeft[color] = Math.max(0, timeLeft[color] - elapsed);
-            lastTurnStartTimestamp = Date.now();
-
             prevBoard = cloneBoard(board);
             board = sim.nextBoard;
             captures[color] += sim.capturedCount;
@@ -593,6 +705,19 @@
             currentTurn = color === 1 ? 2 : 1;
             passCount = 0;
             return { ok: true };
+        }
+
+        function checkNoLegalMovesOffline() {
+            if (!hasAnyLegalMove(board, prevBoard, currentTurn)) {
+                isGameOver = true;
+                clearInterval(timerInterval);
+                localStorage.removeItem(LOCAL_STATE_KEY);
+                const loserName = currentTurn === 1 ? 'Quân Đen' : 'Quân Trắng';
+                const winnerText = currentTurn === 1 ? 'QUÂN TRẮNG THẮNG!' : 'QUÂN ĐEN THẮNG!';
+                setTimeout(() => {
+                    showEndScreen(winnerText, `${loserName} hết nước đi hợp lệ (toàn bộ ô trống đều là điểm tự sát)!`, true);
+                }, 300);
+            }
         }
 
         function calculateTerritoryScore() {
@@ -638,40 +763,43 @@
         function updateUI() {
             document.getElementById('blackCap').innerText = captures[1];
             document.getElementById('whiteCap').innerText = captures[2];
-            renderClocks();
+            updateClocksUI();
         }
 
         function handlePass() {
             if (isGameOver) return;
+            unlockAudio();
             if (isOnline) {
                 if (currentTurn === myColor) socket.emit('passTurn', { roomId, username });
             } else {
-                const elapsed = (Date.now() - lastTurnStartTimestamp) / 1000;
-                timeLeft[currentTurn] = Math.max(0, timeLeft[currentTurn] - elapsed);
-                lastTurnStartTimestamp = Date.now();
-
                 passCount++;
                 if (passCount >= 2) {
                     isGameOver = true;
+                    clearInterval(timerInterval);
                     localStorage.removeItem(LOCAL_STATE_KEY);
                     const res = calculateTerritoryScore();
                     const winText = res.blackTotal > res.whiteTotal ? 'QUÂN ĐEN THẮNG!' : 'QUÂN TRẮNG THẮNG!';
                     showEndScreen(winText, `Đất + Tù binh — Đen: ${res.blackTotal} | Trắng: ${res.whiteTotal} (gồm 6.5 Komi)`, true);
                 } else {
+                    alert(`${currentTurn === 1 ? 'Đen' : 'Trắng'} đã bỏ lượt!`);
                     currentTurn = currentTurn === 1 ? 2 : 1;
+                    lastTickTime = Date.now();
                     updateUI();
                     drawBoard();
-                    saveLocalState();
+                    saveOfflineState();
+                    checkNoLegalMovesOffline();
                 }
             }
         }
 
         function handleResign() {
-            if (isGameOver || !confirm('Bạn chắc chắn muốn đầu hàng?')) return;
+            if (isGameOver) return;
+            if (!confirm('Bạn chắc chắn muốn đầu hàng ván này?')) return;
             if (isOnline) {
                 socket.emit('resignGame', { roomId, username });
             } else {
                 isGameOver = true;
+                clearInterval(timerInterval);
                 localStorage.removeItem(LOCAL_STATE_KEY);
                 showEndScreen(currentTurn === 1 ? 'QUÂN TRẮNG THẮNG!' : 'QUÂN ĐEN THẮNG!', 'Đã đầu hàng', false);
             }
@@ -679,6 +807,8 @@
 
         function showEndScreen(titleText, reasonText, isWin) {
             isGameOver = true;
+            clearInterval(timerInterval);
+            localStorage.removeItem(LOCAL_STATE_KEY);
             const titleEl = document.getElementById('endTitle');
             titleEl.innerText = titleText;
             titleEl.style.color = isWin ? '#2ecc71' : '#e74c3c';
@@ -692,32 +822,32 @@
             window.location.href = '/index1.html';
         }
 
-        // --- ĐỒNG BỘ ONLINE VỚI SERVER.JS ---
         if (isOnline) {
             socket.emit('joinGameRoom', { roomId, username });
 
             socket.on('syncBoard', (game) => {
-                const hadMove = game.lastMove && (!lastMove || game.lastMove.col !== lastMove.col || game.lastMove.row !== lastMove.row);
+                const isNewMove = game.lastMove && (!lastMove || game.lastMove.col !== lastMove.col || game.lastMove.row !== lastMove.row);
                 board = game.board;
                 currentTurn = game.turn;
                 if (game.captures) captures = game.captures;
                 if (game.lastMove) lastMove = game.lastMove;
-
-                // Nhận quỹ thời gian thật từ Server và reset mốc đếm cục bộ
                 if (game.timeLeft) {
                     timeLeft = { 1: Number(game.timeLeft[1]), 2: Number(game.timeLeft[2]) };
-                    lastTurnStartTimestamp = Date.now();
+                    lastTickTime = Date.now();
                 }
-
-                if (hadMove) playMoveSound();
+                if (isNewMove) playStoneSound();
                 updateUI();
                 drawBoard();
+            });
+
+            socket.on('gameNotFound', () => {
+                alert('Phòng đấu đã kết thúc hoặc không tồn tại!');
+                exitMatch();
             });
 
             socket.on('invalidMove', (msg) => alert(msg));
 
             socket.on('matchOver', ({ winner, reason, winnerNewScore }) => {
-                isGameOver = true;
                 const isWin = winner === username;
                 showEndScreen(isWin ? 'CHIẾN THẮNG! (+1 ĐIỂM)' : 'THẤT BẠI!', reason, isWin);
                 if (isWin) sessionStorage.setItem('go_score', winnerNewScore);
