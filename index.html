@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Cờ Vây 9x9 - Chuẩn Pixel & Đầy Đủ Luật</title>
+    <title>Cờ Vây 9x9 - Định Vị Chấm Đỏ Chuẩn Xác</title>
     <style>
         body {
             background: #18181f;
@@ -21,7 +21,7 @@
             align-items: center;
             justify-content: center;
             background: #2b2b36;
-            padding: 10px 18px;
+            padding: 8px 16px;
             border-radius: 8px;
             margin-bottom: 10px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.4);
@@ -29,30 +29,30 @@
         .stat-box { background: #16161d; padding: 6px 12px; border-radius: 6px; font-size: 14px; }
         .board-wrapper {
             position: relative;
-            width: min(84vh, 92vw);
-            height: min(84vh, 92vw);
+            max-width: 92vw;
+            max-height: 82vh;
             display: flex;
             justify-content: center;
             align-items: center;
             border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.85);
-            background: #222;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
         }
         canvas {
-            width: 100%;
-            height: 100%;
-            cursor: pointer;
+            max-width: 92vw;
+            max-height: 82vh;
+            width: auto;
+            height: auto;
             display: block;
+            cursor: pointer;
         }
-        button { padding: 8px 14px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        button:hover { opacity: 0.85; }
+        button { padding: 7px 14px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
         .btn-pass { background: #f39c12; color: #000; }
         .btn-resign { background: #e74c3c; color: #fff; }
         .overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.88);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 1000; text-align: center; padding: 20px;
+            z-index: 1000; text-align: center;
         }
         .hidden { display: none !important; }
     </style>
@@ -60,20 +60,20 @@
 <body>
 
     <div class="hud">
-        <div class="stat-box" id="playerLabel">Chế độ: Chơi 2 người trên 1 máy (9x9)</div>
+        <div class="stat-box" id="playerLabel">Chế độ: Chơi thử 2 người</div>
         <div class="stat-box" id="turnLabel" style="color: #f5b041; font-weight: bold;">Lượt: Quân Đen</div>
         <div class="stat-box">Tù binh — Đen ăn: <strong id="blackCap">0</strong> | Trắng ăn: <strong id="whiteCap">0</strong></div>
         <button class="btn-pass" onclick="handlePass()">Bỏ Lượt (Pass)</button>
         <button class="btn-resign" onclick="handleResign()">Đầu Hàng</button>
     </div>
 
-    <div class="board-wrapper" id="boardWrapper">
+    <div class="board-wrapper">
         <canvas id="goCanvas"></canvas>
     </div>
 
     <div class="overlay hidden" id="endOverlay">
-        <h1 id="endTitle" style="font-size: 44px; margin-bottom: 10px;"></h1>
-        <p id="endReason" style="font-size: 18px; color: #ddd; margin-bottom: 24px; line-height: 1.5;"></p>
+        <h1 id="endTitle" style="font-size: 44px; margin-bottom: 8px;"></h1>
+        <p id="endReason" style="font-size: 18px; color: #ccc; margin-bottom: 24px;"></p>
         <button onclick="exitMatch()" style="padding: 12px 26px; font-size: 16px; background: #2ecc71; color: #000;">Quay về sảnh tìm người chơi</button>
     </div>
 
@@ -81,10 +81,7 @@
     <script>
         const canvas = document.getElementById('goCanvas');
         const ctx = canvas.getContext('2d');
-        const wrapper = document.getElementById('boardWrapper');
-
         const GRID_SIZE = 9;
-        const KOMI = 6.5;
 
         const username = sessionStorage.getItem('go_username');
         const roomId = sessionStorage.getItem('go_roomId');
@@ -97,342 +94,311 @@
             document.getElementById('playerLabel').innerText = `Bạn: ${username} (${myColor === 1 ? 'Đen' : 'Trắng'}) vs ${opponent}`;
         }
 
+        // Dữ liệu bàn cờ 9x9
         let board = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(0));
         let prevBoard = null;
-        let currentTurn = 1;
+        let currentTurn = 1; // 1 = Đen, 2 = Trắng
         let captures = { 1: 0, 2: 0 };
         let lastMove = null;
         let hoverPoint = null;
         let passCount = 0;
 
-        // Mảng 9x9 lưu tọa độ tâm đỏ & kích thước tiêu chuẩn từ ô xanh của boardpixel.png
-        let gridNodes = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
-        let standardStoneDiameter = 60;
+        // Mảng 9x9 lưu tọa độ tâm thực tế {x, y} quét từ chấm đỏ
+        let gridCoords = [];
+        let standardRadius = 24;
 
+        // Chỉ nạp 2 ảnh: bàn cờ sạch và ảnh chấm đỏ chạy ngầm
         const boardImg = new Image();
-        const pixelMapImg = new Image();
-        const blackImg = new Image();
-        const whiteImg = new Image();
-
+        const pixelImg = new Image();
         boardImg.src = '/board.png';
-        pixelMapImg.src = '/boardpixel.png';
-        blackImg.src = '/black.png';
-        whiteImg.src = '/white.PNG';
+        pixelImg.src = '/boardpixel.png';
 
-        let loadedCount = 0;
-        [boardImg, pixelMapImg, blackImg, whiteImg].forEach(img => {
+        let imagesLoaded = 0;
+        [boardImg, pixelImg].forEach(img => {
             img.onload = () => {
-                if (++loadedCount === 4) {
-                    initBoardFromPixelMap();
+                if (++imagesLoaded === 2) {
+                    // Đặt kích thước canvas bằng đúng kích thước tự nhiên của board.png (tỷ lệ 1:1 chuẩn pixel)
+                    canvas.width = boardImg.naturalWidth;
+                    canvas.height = boardImg.naturalHeight;
+                    scanRedDotsFromPixelMap();
+                    if (isOnline) socket.emit('joinGameRoom', { roomId, username });
+                    updateUI();
+                    drawBoard();
                 }
             };
         });
 
-        // --- QUÉT NGẦM CHẤM ĐỎ & KHUNG VUÔNG XANH TỪ BOARDPIXEL.PNG ---
-        function initBoardFromPixelMap() {
-            const w = pixelMapImg.naturalWidth;
-            const h = pixelMapImg.naturalHeight;
-
-            canvas.width = w;
-            canvas.height = h;
-            // Giữ đúng tỷ lệ gốc của ảnh bàn cờ để quân cờ không bao giờ bị méo
-            const maxH = window.innerHeight * 0.82;
-            const maxW = window.innerWidth * 0.92;
-            const ratio = w / h;
-            let dispH = maxH;
-            let dispW = dispH * ratio;
-            if (dispW > maxW) {
-                dispW = maxW;
-                dispH = dispW / ratio;
-            }
-            wrapper.style.width = `${dispW}px`;
-            wrapper.style.height = `${dispH}px`;
-
-            // Vẽ ảnh mẫu lên canvas tàng hình trong bộ nhớ để quét pixel
+        // --- QUÉT NGẦM TÀNG HÌNH 81 CHẤM ĐỎ TỪ boardpixel.png ---
+        function scanRedDotsFromPixelMap() {
             const offCanvas = document.createElement('canvas');
+            const w = pixelImg.naturalWidth;
+            const h = pixelImg.naturalHeight;
             offCanvas.width = w;
             offCanvas.height = h;
             const offCtx = offCanvas.getContext('2d');
-            offCtx.drawImage(pixelMapImg, 0, 0, w, h);
+            offCtx.drawImage(pixelImg, 0, 0, w, h);
+
             const imgData = offCtx.getImageData(0, 0, w, h).data;
+            const visited = new Uint8Array(w * h);
+            const blobs = [];
 
-            const visitedRed = new Uint8Array(w * h);
-            const visitedBlue = new Uint8Array(w * h);
-            const redCenters = [];
-            const blueBoxes = [];
-
-            const isRed = (r, g, b, a) => a > 128 && r > 170 && g < 85 && b < 85;
-            const isBlue = (r, g, b, a) => a > 128 && b > 150 && r < 95 && g < 165;
+            // Nhận diện pixel màu đỏ tươi (R cao, G và B thấp)
+            const isRed = (idx) => {
+                const r = imgData[idx];
+                const g = imgData[idx + 1];
+                const b = imgData[idx + 2];
+                const a = imgData[idx + 3];
+                return a > 128 && r > 170 && g < 85 && b < 85;
+            };
 
             for (let y = 0; y < h; y++) {
                 for (let x = 0; x < w; x++) {
-                    const idx = y * w + x;
-                    const p = idx * 4;
-                    const r = imgData[p], g = imgData[p + 1], b = imgData[p + 2], a = imgData[p + 3];
-
-                    // 1. Quét cụm pixel đỏ -> Tâm giao điểm
-                    if (!visitedRed[idx] && isRed(r, g, b, a)) {
+                    const p = y * w + x;
+                    if (!visited[p] && isRed(p * 4)) {
+                        // Gom cụm pixel liền kề của 1 chấm đỏ
                         let sumX = 0, sumY = 0, count = 0;
                         const queue = [[x, y]];
-                        visitedRed[idx] = 1;
+                        visited[p] = 1;
+
                         while (queue.length > 0) {
-                            const [cx, cy] = queue.pop();
+                            const [cx, cy] = queue.shift();
                             sumX += cx;
                             sumY += cy;
                             count++;
+
                             for (let dy = -1; dy <= 1; dy++) {
                                 for (let dx = -1; dx <= 1; dx++) {
                                     const nx = cx + dx, ny = cy + dy;
                                     if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
-                                        const nIdx = ny * w + nx;
-                                        if (!visitedRed[nIdx]) {
-                                            const np = nIdx * 4;
-                                            if (isRed(imgData[np], imgData[np + 1], imgData[np + 2], imgData[np + 3])) {
-                                                visitedRed[nIdx] = 1;
-                                                queue.push([nx, ny]);
-                                            }
+                                        const np = ny * w + nx;
+                                        if (!visited[np] && isRed(np * 4)) {
+                                            visited[np] = 1;
+                                            queue.push([nx, ny]);
                                         }
                                     }
                                 }
                             }
                         }
+
+                        // Lọc bỏ nhiễu nhỏ hơn 4 pixel
                         if (count >= 4) {
-                            redCenters.push({ x: sumX / count, y: sumY / count });
-                        }
-                    }
-
-                    // 2. Quét viền khung vuông xanh dương -> Kích thước tiêu chuẩn tối đa của quân cờ
-                    if (!visitedBlue[idx] && isBlue(r, g, b, a)) {
-                        let minX = x, maxX = x, minY = y, maxY = y, count = 0;
-                        const queue = [[x, y]];
-                        visitedBlue[idx] = 1;
-                        while (queue.length > 0) {
-                            const [cx, cy] = queue.pop();
-                            if (cx < minX) minX = cx;
-                            if (cx > maxX) maxX = cx;
-                            if (cy < minY) minY = cy;
-                            if (cy > maxY) maxY = cy;
-                            count++;
-                            for (let dy = -1; dy <= 1; dy++) {
-                                for (let dx = -1; dx <= 1; dx++) {
-                                    const nx = cx + dx, ny = cy + dy;
-                                    if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
-                                        const nIdx = ny * w + nx;
-                                        if (!visitedBlue[nIdx]) {
-                                            const np = nIdx * 4;
-                                            if (isBlue(imgData[np], imgData[np + 1], imgData[np + 2], imgData[np + 3])) {
-                                                visitedBlue[nIdx] = 1;
-                                                queue.push([nx, ny]);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        const boxW = maxX - minX;
-                        const boxH = maxY - minY;
-                        if (count >= 20 && boxW > 15 && boxH > 15) {
-                            blueBoxes.push({ cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, size: Math.min(boxW, boxH) });
+                            blobs.push({ x: sumX / count, y: sumY / count, count });
                         }
                     }
                 }
             }
 
-            // Sắp xếp 81 chấm đỏ thành lưới 9 hàng x 9 cột chuẩn xác
-            if (redCenters.length === GRID_SIZE * GRID_SIZE) {
-                redCenters.sort((a, b) => a.y - b.y);
-                for (let row = 0; row < GRID_SIZE; row++) {
-                    const rowSlice = redCenters.slice(row * GRID_SIZE, (row + 1) * GRID_SIZE);
-                    rowSlice.sort((a, b) => a.x - b.x);
-                    for (let col = 0; col < GRID_SIZE; col++) {
-                        gridNodes[col][row] = {
-                            x: rowSlice[col].x,
-                            y: rowSlice[col].y,
-                            maxSize: null
-                        };
+            // Nếu tìm đủ 81 chấm đỏ -> Sắp xếp thành lưới 9 hàng x 9 cột
+            if (blobs.length >= 81) {
+                // Giữ 81 cụm rõ nhất nếu có nhiễu
+                blobs.sort((a, b) => b.count - a.count);
+                const top81 = blobs.slice(0, 81);
+
+                // Sắp xếp theo hàng (Y tăng dần từ trên xuống)
+                top81.sort((a, b) => a.y - b.y);
+                gridCoords = [];
+                for (let r = 0; r < GRID_SIZE; r++) {
+                    const rowItems = top81.slice(r * GRID_SIZE, (r + 1) * GRID_SIZE);
+                    // Trong mỗi hàng, sắp xếp theo cột (X tăng dần từ trái sang phải)
+                    rowItems.sort((a, b) => a.x - b.x);
+                    gridCoords.push(rowItems);
+                }
+
+                // Tính bán kính quân cờ tiêu chuẩn = 44% khoảng cách trung bình giữa 2 giao điểm kề nhau
+                let totalDist = 0, samples = 0;
+                for (let r = 0; r < GRID_SIZE; r++) {
+                    for (let c = 0; c < GRID_SIZE - 1; c++) {
+                        totalDist += Math.hypot(gridCoords[r][c + 1].x - gridCoords[r][c].x, gridCoords[r][c + 1].y - gridCoords[r][c].y);
+                        samples++;
                     }
                 }
+                for (let r = 0; r < GRID_SIZE - 1; r++) {
+                    for (let c = 0; c < GRID_SIZE; c++) {
+                        totalDist += Math.hypot(gridCoords[r + 1][c].x - gridCoords[r][c].x, gridCoords[r + 1][c].y - gridCoords[r][c].y);
+                        samples++;
+                    }
+                }
+                standardRadius = (totalDist / samples) * 0.44;
             } else {
-                // Dự phòng nếu thiếu/thừa điểm đỏ: nội suy đều từ 4 góc
-                const minX = Math.min(...redCenters.map(p => p.x));
-                const maxX = Math.max(...redCenters.map(p => p.x));
-                const minY = Math.min(...redCenters.map(p => p.y));
-                const maxY = Math.max(...redCenters.map(p => p.y));
-                for (let col = 0; col < GRID_SIZE; col++) {
-                    for (let row = 0; row < GRID_SIZE; row++) {
-                        gridNodes[col][row] = {
-                            x: minX + col * ((maxX - minX) / (GRID_SIZE - 1)),
-                            y: minY + row * ((maxY - minY) / (GRID_SIZE - 1)),
-                            maxSize: null
-                        };
+                // Dự phòng nếu ảnh thiếu chấm đỏ
+                const step = Math.min(w, h) / 10;
+                for (let r = 0; r < GRID_SIZE; r++) {
+                    const rowItems = [];
+                    for (let c = 0; c < GRID_SIZE; c++) {
+                        rowItems.push({ x: step * (c + 1), y: step * (r + 1) });
                     }
+                    gridCoords.push(rowItems);
                 }
+                standardRadius = step * 0.44;
             }
 
-            // Gán kích thước ô xanh dương vào từng giao điểm để quân cờ không bao giờ vượt quá ô
-            if (blueBoxes.length > 0) {
-                const avgBoxSize = blueBoxes.reduce((s, b) => s + b.size, 0) / blueBoxes.length;
-                standardStoneDiameter = avgBoxSize * 0.94;
-                for (let col = 0; col < GRID_SIZE; col++) {
-                    for (let row = 0; row < GRID_SIZE; row++) {
-                        const node = gridNodes[col][row];
-                        let bestBox = null, bestDist = Infinity;
-                        for (const box of blueBoxes) {
-                            const d = Math.hypot(box.cx - node.x, box.cy - node.y);
-                            if (d < bestDist) {
-                                bestDist = d;
-                                bestBox = box;
-                            }
-                        }
-                        node.maxSize = (bestBox && bestDist < avgBoxSize * 0.6) ? bestBox.size * 0.94 : standardStoneDiameter;
-                    }
-                }
-            } else {
-                const step = Math.hypot(gridNodes[1][0].x - gridNodes[0][0].x, gridNodes[1][0].y - gridNodes[0][0].y);
-                standardStoneDiameter = step * 0.92;
-                for (let col = 0; col < GRID_SIZE; col++) {
-                    for (let row = 0; row < GRID_SIZE; row++) {
-                        gridNodes[col][row].maxSize = standardStoneDiameter;
-                    }
-                }
-            }
-
-            // Xóa dữ liệu bộ nhớ tạm của ảnh boardpixel.png -> Tàng hình 100%
+            // Xóa bộ nhớ ảnh chấm đỏ ngay lập tức
             offCanvas.width = 0;
             offCanvas.height = 0;
-
-            if (isOnline) socket.emit('joinGameRoom', { roomId, username });
-            updateUI();
-            drawBoard();
         }
 
-        // --- VẼ BÀN CỜ, QUÂN CỜ & BÓNG MỜ MÀU XÁM ---
-        function drawBoard() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            // Chỉ vẽ bức ảnh bàn gỗ sạch board.png lên màn hình
-            ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
-
-            // 1. Vẽ bóng mờ màu xám tại giao điểm đang chọn (nếu ô trống)
-            if (hoverPoint && board[hoverPoint.col][hoverPoint.row] === 0) {
-                if (!isOnline || currentTurn === myColor) {
-                    const node = gridNodes[hoverPoint.col][hoverPoint.row];
-                    if (node) {
-                        const radius = (node.maxSize || standardStoneDiameter) / 2;
-                        ctx.save();
-                        ctx.beginPath();
-                        ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
-                        ctx.fillStyle = 'rgba(110, 115, 125, 0.52)';
-                        ctx.fill();
-                        ctx.lineWidth = 2;
-                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-                        ctx.stroke();
-                        ctx.restore();
-                    }
-                }
+        // --- VẼ QUÂN CỜ BẰNG CODE (TRÒN XOE 100%, ĐỔ BÓNG 3D TỰ NHIÊN) ---
+        function drawStoneByCode(cx, cy, radius, color, isGhost = false) {
+            ctx.save();
+            if (isGhost) {
+                ctx.globalAlpha = 0.45;
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+                ctx.fillStyle = color === 1 ? '#222222' : '#e0e0e0';
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#888888';
+                ctx.stroke();
+                ctx.restore();
+                return;
             }
 
-            // 2. Vẽ các quân cờ đã đặt (hình vuông 1:1 chuẩn kích thước ô xanh -> tròn xoe, không bao giờ méo)
-            for (let col = 0; col < GRID_SIZE; col++) {
-                for (let row = 0; row < GRID_SIZE; row++) {
-                    const stone = board[col][row];
-                    if (stone !== 0 && gridNodes[col][row]) {
-                        const node = gridNodes[col][row];
-                        const size = node.maxSize || standardStoneDiameter;
-                        ctx.drawImage(
-                            stone === 1 ? blackImg : whiteImg,
-                            node.x - size / 2,
-                            node.y - size / 2,
-                            size,
-                            size
-                        );
+            // Đổ bóng nhẹ dưới quân cờ
+            ctx.beginPath();
+            ctx.arc(cx + radius * 0.08, cy + radius * 0.1, radius, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.42)';
+            ctx.fill();
 
-                        if (lastMove && lastMove.col === col && lastMove.row === row) {
+            // Tạo khối cầu 3D bằng RadialGradient
+            const grad = ctx.createRadialGradient(
+                cx - radius * 0.3, cy - radius * 0.3, radius * 0.1,
+                cx, cy, radius
+            );
+
+            if (color === 1) {
+                // Quân Đen đá phiến
+                grad.addColorStop(0, '#5a5a5a');
+                grad.addColorStop(0.35, '#1f1f1f');
+                grad.addColorStop(1, '#080808');
+            } else {
+                // Quân Trắng vỏ sò
+                grad.addColorStop(0, '#ffffff');
+                grad.addColorStop(0.7, '#ececec');
+                grad.addColorStop(1, '#bdbdbd');
+            }
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            // Viền mảnh sắc nét
+            ctx.lineWidth = 1.2;
+            ctx.strokeStyle = color === 1 ? '#000000' : '#999999';
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawBoard() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
+
+            if (gridCoords.length < GRID_SIZE) return;
+
+            // Vẽ các quân cờ đã đặt
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    const stone = board[r][c];
+                    if (stone !== 0) {
+                        const pt = gridCoords[r][c];
+                        drawStoneByCode(pt.x, pt.y, standardRadius, stone, false);
+
+                        // Chấm đỏ nhỏ đánh dấu nước đi cuối cùng
+                        if (lastMove && lastMove.r === r && lastMove.c === c) {
                             ctx.beginPath();
-                            ctx.arc(node.x, node.y, size * 0.16, 0, Math.PI * 2);
+                            ctx.arc(pt.x, pt.y, standardRadius * 0.22, 0, Math.PI * 2);
                             ctx.fillStyle = '#e74c3c';
                             ctx.fill();
                         }
                     }
                 }
             }
+
+            // Vẽ bóng mờ xám định vị tại tâm giao điểm đang rê chuột
+            if (hoverPoint && board[hoverPoint.r][hoverPoint.c] === 0) {
+                if (!isOnline || currentTurn === myColor) {
+                    const pt = gridCoords[hoverPoint.r][hoverPoint.c];
+                    drawStoneByCode(pt.x, pt.y, standardRadius, currentTurn, true);
+                }
+            }
         }
 
-        // --- BẮT TÂM GIAO ĐIỂM GẦN NHẤT KHI RÊ CHUỘT & CLICK ---
+        // Tìm tâm giao điểm gần vị trí chuột nhất
         function findNearestIntersection(clientX, clientY) {
+            if (gridCoords.length < GRID_SIZE) return null;
             const rect = canvas.getBoundingClientRect();
-            const px = (clientX - rect.left) * (canvas.width / rect.width);
-            const py = (clientY - rect.top) * (canvas.height / rect.height);
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const mx = (clientX - rect.left) * scaleX;
+            const my = (clientY - rect.top) * scaleY;
 
             let best = null;
-            let minDist = Infinity;
-            for (let col = 0; col < GRID_SIZE; col++) {
-                for (let row = 0; row < GRID_SIZE; row++) {
-                    const node = gridNodes[col][row];
-                    if (!node) continue;
-                    const d = Math.hypot(px - node.x, py - node.y);
+            let minDist = standardRadius * 1.15;
+
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    const pt = gridCoords[r][c];
+                    const d = Math.hypot(mx - pt.x, my - pt.y);
                     if (d < minDist) {
                         minDist = d;
-                        best = { col, row };
+                        best = { r, c };
                     }
                 }
             }
-            return (best && minDist <= standardStoneDiameter * 0.75) ? best : null;
+            return best;
         }
 
         canvas.addEventListener('mousemove', (e) => {
             const nearest = findNearestIntersection(e.clientX, e.clientY);
-            const changed = (!nearest && hoverPoint) || (nearest && (!hoverPoint || nearest.col !== hoverPoint.col || nearest.row !== hoverPoint.row));
-            if (changed) {
-                hoverPoint = nearest;
-                drawBoard();
-            }
+            if (!nearest && !hoverPoint) return;
+            if (nearest && hoverPoint && nearest.r === hoverPoint.r && nearest.c === hoverPoint.c) return;
+            hoverPoint = nearest;
+            drawBoard();
         });
 
         canvas.addEventListener('mouseleave', () => {
-            if (hoverPoint) {
-                hoverPoint = null;
-                drawBoard();
-            }
+            hoverPoint = null;
+            drawBoard();
         });
 
         canvas.addEventListener('click', (e) => {
             if (isOnline && currentTurn !== myColor) return;
-            const target = findNearestIntersection(e.clientX, e.clientY);
-            if (!target) return;
+            const pt = findNearestIntersection(e.clientX, e.clientY);
+            if (!pt) return;
 
             if (isOnline) {
-                socket.emit('playMove', { roomId, col: target.col, row: target.row, username });
+                socket.emit('playMove', { roomId, col: pt.c, row: pt.r, username });
             } else {
-                const res = executeMove(target.col, target.row, currentTurn);
+                const res = executeMove(pt.r, pt.c, currentTurn);
                 if (!res.ok) return alert(res.msg);
                 updateUI();
                 drawBoard();
             }
         });
 
-        // --- LUẬT CỜ VÂY CHUẨN 9x9 (KHÍ, ĂN QUÂN, CẤM TỰ SÁT, KO & TÍNH ĐẤT) ---
+        // --- LUẬT CỜ VÂY 9x9 CHUẨN ---
         const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
         const cloneBoard = (b) => b.map(r => [...r]);
         const isSameBoard = (b1, b2) => b1 && b2 && JSON.stringify(b1) === JSON.stringify(b2);
 
-        function getGroupAndLiberties(targetBoard, startCol, startRow) {
-            const color = targetBoard[startCol][startRow];
+        function getGroupAndLiberties(targetBoard, startR, startC) {
+            const color = targetBoard[startR][startC];
             const visited = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(false));
             const group = [];
             const liberties = new Set();
-            const queue = [[startCol, startRow]];
-            visited[startCol][startRow] = true;
+            const queue = [[startR, startC]];
+            visited[startR][startC] = true;
 
             while (queue.length > 0) {
-                const [c, r] = queue.shift();
-                group.push([c, r]);
-                for (const [dc, dr] of DIRS) {
-                    const nc = c + dc, nr = r + dr;
-                    if (nc >= 0 && nc < GRID_SIZE && nr >= 0 && nr < GRID_SIZE) {
-                        if (targetBoard[nc][nr] === 0) liberties.add(`${nc},${nr}`);
-                        else if (targetBoard[nc][nr] === color && !visited[nc][nr]) {
-                            visited[nc][nr] = true;
-                            queue.push([nc, nr]);
+                const [r, c] = queue.shift();
+                group.push([r, c]);
+                for (const [dr, dc] of DIRS) {
+                    const nr = r + dr, nc = c + dc;
+                    if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
+                        if (targetBoard[nr][nc] === 0) liberties.add(`${nr},${nc}`);
+                        else if (targetBoard[nr][nc] === color && !visited[nr][nc]) {
+                            visited[nr][nc] = true;
+                            queue.push([nr, nc]);
                         }
                     }
                 }
@@ -440,71 +406,65 @@
             return { group, liberties: liberties.size };
         }
 
-        function executeMove(col, row, color) {
-            if (board[col][row] !== 0) return { ok: false, msg: 'Giao điểm này đã có quân!' };
-
+        function executeMove(r, c, color) {
+            if (board[r][c] !== 0) return { ok: false, msg: 'Giao điểm này đã có quân!' };
             const nextBoard = cloneBoard(board);
-            nextBoard[col][row] = color;
+            nextBoard[r][c] = color;
             const enemy = color === 1 ? 2 : 1;
             let capturedCount = 0;
 
-            // 1. Bắt quân địch hết khí
-            for (const [dc, dr] of DIRS) {
-                const nc = col + dc, nr = row + dr;
-                if (nc >= 0 && nc < GRID_SIZE && nr >= 0 && nr < GRID_SIZE && nextBoard[nc][nr] === enemy) {
-                    const { group, liberties } = getGroupAndLiberties(nextBoard, nc, nr);
+            for (const [dr, dc] of DIRS) {
+                const nr = r + dr, nc = c + dc;
+                if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE && nextBoard[nr][nc] === enemy) {
+                    const { group, liberties } = getGroupAndLiberties(nextBoard, nr, nc);
                     if (liberties === 0) {
                         capturedCount += group.length;
-                        for (const [gc, gr] of group) nextBoard[gc][gr] = 0;
+                        for (const [gr, gc] of group) nextBoard[gr][gc] = 0;
                     }
                 }
             }
 
-            // 2. Cấm tự sát (trừ khi vừa bắt được quân địch)
-            const selfGroup = getGroupAndLiberties(nextBoard, col, row);
+            const selfGroup = getGroupAndLiberties(nextBoard, r, c);
             if (capturedCount === 0 && selfGroup.liberties === 0) {
-                return { ok: false, msg: 'Phạm luật: Điểm tự sát (hết khí và không bắt được quân địch)!' };
+                return { ok: false, msg: 'Phạm luật: Điểm tự sát!' };
             }
-
-            // 3. Luật Ko (không lặp lại thế cờ ngay trước đó)
             if (isSameBoard(nextBoard, prevBoard)) {
-                return { ok: false, msg: 'Phạm luật Ko: Không được lặp lại y hệt thế bàn cờ ngay trước đó!' };
+                return { ok: false, msg: 'Phạm luật Ko: Không được lặp lại thế cờ ngay trước đó!' };
             }
 
             prevBoard = cloneBoard(board);
             board = nextBoard;
             captures[color] += capturedCount;
-            lastMove = { col, row };
+            lastMove = { r, c };
             currentTurn = enemy;
             passCount = 0;
             return { ok: true };
         }
 
-        // Tính điểm Đất (Territory) + Tù binh + Komi 6.5
+        // Tính điểm Đất + Tù binh + Komi 6.5 khi 2 người Pass liên tiếp
         function calculateFinalScore() {
             const visited = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(false));
-            let blackTerritory = 0;
-            let whiteTerritory = 0;
+            let blackTerritory = 0, whiteTerritory = 0;
 
-            for (let c = 0; c < GRID_SIZE; c++) {
-                for (let r = 0; r < GRID_SIZE; r++) {
-                    if (board[c][r] === 0 && !visited[c][r]) {
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    if (board[r][c] === 0 && !visited[r][c]) {
                         const region = [];
                         const borders = new Set();
-                        const queue = [[c, r]];
-                        visited[c][r] = true;
+                        const queue = [[r, c]];
+                        visited[r][c] = true;
 
                         while (queue.length > 0) {
-                            const [cc, cr] = queue.shift();
-                            region.push([cc, cr]);
-                            for (const [dc, dr] of DIRS) {
-                                const nc = cc + dc, nr = cr + dr;
-                                if (nc >= 0 && nc < GRID_SIZE && nr >= 0 && nr < GRID_SIZE) {
-                                    if (board[nc][nr] === 0 && !visited[nc][nr]) {
-                                        visited[nc][nr] = true;
-                                        queue.push([nc, nr]);
-                                    } else if (board[nc][nr] !== 0) {
-                                        borders.add(board[nc][nr]);
+                            const [cr, cc] = queue.shift();
+                            region.push([cr, cc]);
+                            for (const [dr, dc] of DIRS) {
+                                const nr = cr + dr, nc = cc + dc;
+                                if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
+                                    if (board[nr][nc] === 0 && !visited[nr][nc]) {
+                                        visited[nr][nc] = true;
+                                        queue.push([nr, nc]);
+                                    } else if (board[nr][nc] !== 0) {
+                                        borders.add(board[nr][nc]);
                                     }
                                 }
                             }
@@ -519,8 +479,8 @@
             }
 
             const blackTotal = blackTerritory + captures[1];
-            const whiteTotal = whiteTerritory + captures[2] + KOMI;
-            return { blackTerritory, whiteTerritory, blackTotal, whiteTotal };
+            const whiteTotal = whiteTerritory + captures[2] + 6.5;
+            return { blackTotal, whiteTotal, blackTerritory, whiteTerritory };
         }
 
         function updateUI() {
@@ -539,35 +499,32 @@
             } else {
                 passCount++;
                 if (passCount >= 2) {
-                    const s = calculateFinalScore();
-                    const blackWin = s.blackTotal > s.whiteTotal;
-                    const detail = `Đen: ${s.blackTerritory} đất + ${captures[1]} tù binh = ${s.blackTotal} điểm<br>` +
-                                   `Trắng: ${s.whiteTerritory} đất + ${captures[2]} tù binh + ${KOMI} Komi = ${s.whiteTotal} điểm`;
-                    showEndScreen(blackWin ? 'QUÂN ĐEN THẮNG!' : 'QUÂN TRẮNG THẮNG!', detail, true);
+                    const res = calculateFinalScore();
+                    const winText = res.blackTotal > res.whiteTotal ? 'QUÂN ĐEN THẮNG!' : 'QUÂN TRẮNG THẮNG!';
+                    showEndScreen(
+                        winText,
+                        `Đen: ${res.blackTotal} điểm (Đất ${res.blackTerritory} + Tù binh ${captures[1]}) | Trắng: ${res.whiteTotal} điểm (Đất ${res.whiteTerritory} + Tù binh ${captures[2]} + 6.5 Komi)`,
+                        true
+                    );
                 } else {
-                    alert(`${currentTurn === 1 ? 'Quân Đen' : 'Quân Trắng'} đã bỏ lượt! Nếu đối phương cũng bỏ lượt sẽ kết thúc tính điểm.`);
+                    alert(`${currentTurn === 1 ? 'Đen' : 'Trắng'} đã bỏ lượt!`);
                     currentTurn = currentTurn === 1 ? 2 : 1;
                     updateUI();
-                    drawBoard();
                 }
             }
         }
 
         function handleResign() {
             if (!confirm('Bạn chắc chắn muốn đầu hàng ván này?')) return;
-            if (isOnline) {
-                socket.emit('resignGame', { roomId, username });
-            } else {
-                const winner = currentTurn === 1 ? 'QUÂN TRẮNG THẮNG!' : 'QUÂN ĐEN THẮNG!';
-                showEndScreen(winner, `${currentTurn === 1 ? 'Quân Đen' : 'Quân Trắng'} đã đầu hàng`, false);
-            }
+            if (isOnline) socket.emit('resignGame', { roomId, username });
+            else showEndScreen(currentTurn === 1 ? 'QUÂN TRẮNG THẮNG!' : 'QUÂN ĐEN THẮNG!', 'Đối phương đã đầu hàng', false);
         }
 
-        function showEndScreen(titleText, reasonHtml, isWin) {
+        function showEndScreen(titleText, reasonText, isWin) {
             const titleEl = document.getElementById('endTitle');
             titleEl.innerText = titleText;
             titleEl.style.color = isWin ? '#2ecc71' : '#e74c3c';
-            document.getElementById('endReason').innerHTML = reasonHtml;
+            document.getElementById('endReason').innerText = reasonText;
             document.getElementById('endOverlay').classList.remove('hidden');
         }
 
@@ -581,22 +538,16 @@
                 board = game.board;
                 currentTurn = game.turn;
                 if (game.captures) captures = game.captures;
-                if (game.lastMove) lastMove = game.lastMove;
+                if (game.lastMove) lastMove = { r: game.lastMove.row, c: game.lastMove.col };
                 updateUI();
                 drawBoard();
             });
-
             socket.on('invalidMove', (msg) => alert(msg));
-
             socket.on('matchOver', ({ winner, reason, winnerNewScore }) => {
                 const isWin = winner === username;
-                showEndScreen(
-                    isWin ? 'CHIẾN THẮNG! (+1 ĐIỂM)' : 'THẤT BẠI!',
-                    reason,
-                    isWin
-                );
+                showEndScreen(isWin ? 'CHIẾN THẮNG! (+1 ĐIỂM)' : 'THẤT BẠI!', reason, isWin);
                 if (isWin) sessionStorage.setItem('go_score', winnerNewScore);
-                setTimeout(exitMatch, 4000);
+                setTimeout(exitMatch, 3500);
             });
         }
     </script>
