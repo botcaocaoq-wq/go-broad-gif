@@ -1,13 +1,13 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static(path.join(__dirname, 'wwwroot'), { index: 'index1.html' }));
+// Đọc trực tiếp các file HTML và ảnh đang nằm ở thư mục gốc trên GitHub
+app.use(express.static(__dirname, { index: 'index1.html' }));
 
 const users = {};
 const onlinePlayers = {};
@@ -28,6 +28,7 @@ function broadcastOnlineList() {
 }
 
 const SIZE = 19;
+const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const cloneBoard = (b) => b.map(row => [...row]);
 const boardsEqual = (b1, b2) => b1 && b2 && JSON.stringify(b1) === JSON.stringify(b2);
 
@@ -39,11 +40,10 @@ function getGroupAndLiberties(board, startCol, startRow) {
     const queue = [[startCol, startRow]];
     visited[startCol][startRow] = true;
 
-    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
     while (queue.length > 0) {
         const [c, r] = queue.shift();
         group.push([c, r]);
-        for (const [dc, dr] of dirs) {
+        for (const [dc, dr] of DIRS) {
             const nc = c + dc, nr = r + dr;
             if (nc >= 0 && nc < SIZE && nr >= 0 && nr < SIZE) {
                 if (board[nc][nr] === 0) {
@@ -64,10 +64,9 @@ function tryPlayMove(game, col, row, color) {
     const nextBoard = cloneBoard(game.board);
     nextBoard[col][row] = color;
     const opponent = color === 1 ? 2 : 1;
-    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
     let capturedCount = 0;
 
-    for (const [dc, dr] of dirs) {
+    for (const [dc, dr] of DIRS) {
         const nc = col + dc, nr = row + dr;
         if (nc >= 0 && nc < SIZE && nr >= 0 && nr < SIZE && nextBoard[nc][nr] === opponent) {
             const { group, liberties } = getGroupAndLiberties(nextBoard, nc, nr);
