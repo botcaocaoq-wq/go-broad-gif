@@ -2,63 +2,73 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Bàn Cờ Vây 19x19 - Đầy Đủ Luật</title>
+    <title>Trận Đấu Cờ Vây 19x19</title>
     <style>
         body {
-            background: #1e1e24;
+            background: #18181f;
             color: #fff;
             font-family: Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            margin: 12px;
+            margin: 8px;
             user-select: none;
         }
         .hud {
             display: flex;
             flex-wrap: wrap;
-            gap: 16px;
+            gap: 12px;
             align-items: center;
             justify-content: center;
             background: #2b2b36;
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 8px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         }
-        .stat-box {
-            background: #16161d;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 14px;
-        }
-        canvas {
-            box-shadow: 0 8px 25px rgba(0,0,0,0.7);
-            cursor: pointer;
-            max-width: 92vw;
-            max-height: 76vh;
-        }
-        button {
-            padding: 8px 14px;
-            border: none;
-            border-radius: 5px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        button:hover { opacity: 0.85; }
-        .btn-pass { background: #f39c12; color: #000; }
-        .btn-resign { background: #e74c3c; color: #fff; }
-        .overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.88);
+        .stat-box { background: #16161d; padding: 6px 12px; border-radius: 6px; font-size: 14px; }
+        
+        /* Khung chứa bàn cờ to bằng khung đỏ bạn đánh dấu */
+        .board-wrapper {
+            position: relative;
+            width: min(86vh, 92vw);
+            height: min(86vh, 92vw);
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 1000;
-            text-align: center;
+            overflow: hidden;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            display: block;
+        }
+        button { padding: 7px 13px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        .btn-pass { background: #f39c12; color: #000; }
+        .btn-resign { background: #e74c3c; color: #fff; }
+
+        /* Bảng căn chỉnh tọa độ trực tiếp bằng mắt thường */
+        .calibrator {
+            position: fixed;
+            bottom: 12px;
+            right: 12px;
+            background: rgba(30, 30, 40, 0.95);
+            border: 1px solid #f5b041;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            z-index: 900;
+        }
+        .calibrator div { margin: 5px 0; display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+        .calibrator button { padding: 2px 8px; background: #4a4a5e; color: #fff; }
+
+        .overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.88);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 1000; text-align: center;
         }
         .hidden { display: none !important; }
     </style>
@@ -66,16 +76,44 @@
 <body>
 
     <div class="hud">
-        <div class="stat-box" id="playerLabel">Chế độ: Chơi thử 2 người trên 1 máy</div>
+        <div class="stat-box" id="playerLabel">Chế độ: Test 2 người</div>
         <div class="stat-box" id="turnLabel" style="color: #f5b041; font-weight: bold;">Lượt: Quân Đen</div>
         <div class="stat-box">Tù binh — Đen ăn: <strong id="blackCap">0</strong> | Trắng ăn: <strong id="whiteCap">0</strong></div>
         <button class="btn-pass" onclick="handlePass()">Bỏ Lượt (Pass)</button>
         <button class="btn-resign" onclick="handleResign()">Đầu Hàng</button>
     </div>
 
-    <canvas id="goCanvas"></canvas>
+    <div class="board-wrapper">
+        <canvas id="goCanvas" width="1200" height="1200"></canvas>
+    </div>
 
-    <!-- MÀN HÌNH KẾT THÚC TRẬN -->
+    <!-- CÔNG CỤ CĂN KHỚP TỌA ĐỘ TRỰC TIẾP -->
+    <div class="calibrator" id="calBox">
+        <strong style="color:#f5b041;">Căn chỉnh quân cờ khớp lưới:</strong>
+        <div>
+            <span>Lề trái/phải (%): <b id="valMarginX">3.6</b></span>
+            <span>
+                <button onclick="adj('mx', -0.2)">-</button>
+                <button onclick="adj('mx', 0.2)">+</button>
+            </span>
+        </div>
+        <div>
+            <span>Lề trên (%): <b id="valMarginTop">21.5</b></span>
+            <span>
+                <button onclick="adj('mt', -0.5)">-</button>
+                <button onclick="adj('mt', 0.5)">+</button>
+            </span>
+        </div>
+        <div>
+            <span>Lề dưới (%): <b id="valMarginBot">21.5</b></span>
+            <span>
+                <button onclick="adj('mb', -0.5)">-</button>
+                <button onclick="adj('mb', 0.5)">+</button>
+            </span>
+        </div>
+        <button onclick="document.getElementById('calBox').style.display='none'" style="width:100%; margin-top:5px; background:#2ecc71; color:#000;">Ẩn bảng chỉnh</button>
+    </div>
+
     <div class="overlay hidden" id="endOverlay">
         <h1 id="endTitle" style="font-size: 46px; margin-bottom: 8px;"></h1>
         <p id="endReason" style="font-size: 19px; color: #ccc; margin-bottom: 24px;"></p>
@@ -87,12 +125,29 @@
         const canvas = document.getElementById('goCanvas');
         const ctx = canvas.getContext('2d');
         const GRID_SIZE = 19;
-        const MARGIN = 71.3; // Tọa độ tâm giao điểm góc đo từ Krita
 
-        // Kiểm tra xem đang vào từ sảnh online (index1.html) hay mở trực tiếp để test
+        let cal = {
+            mx: Number(localStorage.getItem('go_mx')) || 3.6,
+            mt: Number(localStorage.getItem('go_mt')) || 21.5,
+            mb: Number(localStorage.getItem('go_mb')) || 21.5
+        };
+
+        function adj(key, delta) {
+            cal[key] = Math.round((cal[key] + delta) * 10) / 10;
+            localStorage.setItem('go_' + key, cal[key]);
+            document.getElementById('valMarginX').innerText = cal.mx;
+            document.getElementById('valMarginTop').innerText = cal.mt;
+            document.getElementById('valMarginBot').innerText = cal.mb;
+            drawBoard();
+        }
+
+        document.getElementById('valMarginX').innerText = cal.mx;
+        document.getElementById('valMarginTop').innerText = cal.mt;
+        document.getElementById('valMarginBot').innerText = cal.mb;
+
         const username = sessionStorage.getItem('go_username');
         const roomId = sessionStorage.getItem('go_roomId');
-        const myColor = Number(sessionStorage.getItem('go_color') || 0); // 1: Đen, 2: Trắng, 0: Test 1 máy
+        const myColor = Number(sessionStorage.getItem('go_color') || 0);
         const opponent = sessionStorage.getItem('go_opponent') || 'Đối thủ';
         const isOnline = Boolean(username && roomId && typeof io !== 'undefined');
         const socket = isOnline ? io() : null;
@@ -101,15 +156,13 @@
             document.getElementById('playerLabel').innerText = `Bạn: ${username} (${myColor === 1 ? 'Đen' : 'Trắng'}) vs ${opponent}`;
         }
 
-        // Trạng thái ván cờ
         let board = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(0));
         let prevBoard = null;
-        let currentTurn = 1; // 1 = Đen đi trước, 2 = Trắng
-        let captures = { 1: 0, 2: 0 }; // Số quân đối phương đã bắt được
-        let lastMove = null; // Lưu tọa độ nước đi cuối {col, row}
+        let currentTurn = 1;
+        let captures = { 1: 0, 2: 0 };
+        let lastMove = null;
         let passCount = 0;
 
-        // Tải 3 hình ảnh từ wwwroot
         const boardImg = new Image();
         const blackImg = new Image();
         const whiteImg = new Image();
@@ -121,8 +174,8 @@
         [boardImg, blackImg, whiteImg].forEach(img => {
             img.onload = () => {
                 if (++loadedCount === 3) {
-                    canvas.width = boardImg.naturalWidth;
-                    canvas.height = boardImg.naturalHeight;
+                    canvas.width = 1200;
+                    canvas.height = 1200;
                     if (isOnline) socket.emit('joinGameRoom', { roomId, username });
                     updateUI();
                     drawBoard();
@@ -130,99 +183,38 @@
             };
         });
 
-        // --- BỘ LUẬT CỜ VÂY CHUẨN ---
-        const cloneBoard = (b) => b.map(r => [...r]);
-        const isSameBoard = (b1, b2) => b1 && b2 && JSON.stringify(b1) === JSON.stringify(b2);
+        function getMetrics() {
+            const iw = boardImg.naturalWidth;
+            const ih = boardImg.naturalHeight;
+            const cropY = Math.max(0, (ih - iw) / 2);
+            const cropH = Math.min(ih, iw);
 
-        // Thuật toán BFS tìm cả cụm quân cùng màu và đếm số "Khí" (điểm trống xung quanh)
-        function getGroupAndLiberties(targetBoard, startCol, startRow) {
-            const color = targetBoard[startCol][startRow];
-            const visited = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(false));
-            const group = [];
-            const liberties = new Set();
-            const queue = [[startCol, startRow]];
-            visited[startCol][startRow] = true;
+            const left = (cal.mx / 100) * canvas.width;
+            const right = canvas.width - left;
+            const topOrigPx = (cal.mt / 100) * ih;
+            const botOrigPx = ih - (cal.mb / 100) * ih;
+            const top = ((topOrigPx - cropY) / cropH) * canvas.height;
+            const bottom = ((botOrigPx - cropY) / cropH) * canvas.height;
 
-            const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-            while (queue.length > 0) {
-                const [c, r] = queue.shift();
-                group.push([c, r]);
-
-                for (const [dc, dr] of dirs) {
-                    const nc = c + dc, nr = r + dr;
-                    if (nc >= 0 && nc < GRID_SIZE && nr >= 0 && nr < GRID_SIZE) {
-                        if (targetBoard[nc][nr] === 0) {
-                            liberties.add(`${nc},${nr}`);
-                        } else if (targetBoard[nc][nr] === color && !visited[nc][nr]) {
-                            visited[nc][nr] = true;
-                            queue.push([nc, nr]);
-                        }
-                    }
-                }
-            }
-            return { group, liberties: liberties.size };
+            const stepX = (right - left) / (GRID_SIZE - 1);
+            const stepY = (bottom - top) / (GRID_SIZE - 1);
+            return { iw, ih, cropY, cropH, left, top, stepX, stepY };
         }
 
-        // Xử lý kiểm tra & thực hiện nước đi
-        function executeMove(col, row, color) {
-            if (board[col][row] !== 0) return { ok: false, msg: 'Giao điểm này đã có quân!' };
-
-            const nextBoard = cloneBoard(board);
-            nextBoard[col][row] = color;
-            const enemy = color === 1 ? 2 : 1;
-            const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-            let capturedCount = 0;
-
-            // 1. Kiểm tra ăn quân địch xung quanh (nếu cụm quân địch hết khí = 0)
-            for (const [dc, dr] of dirs) {
-                const nc = col + dc, nr = row + dr;
-                if (nc >= 0 && nc < GRID_SIZE && nr >= 0 && nr < GRID_SIZE && nextBoard[nc][nr] === enemy) {
-                    const { group, liberties } = getGroupAndLiberties(nextBoard, nc, nr);
-                    if (liberties === 0) {
-                        capturedCount += group.length;
-                        for (const [gc, gr] of group) {
-                            nextBoard[gc][gr] = 0; // Bốc quân bị ăn khỏi bàn
-                        }
-                    }
-                }
-            }
-
-            // 2. Luật cấm tự sát: Đặt xong mà quân mình = 0 khí và không ăn được quân địch
-            const selfGroup = getGroupAndLiberties(nextBoard, col, row);
-            if (capturedCount === 0 && selfGroup.liberties === 0) {
-                return { ok: false, msg: 'Phạm luật: Nước đi tự sát!' };
-            }
-
-            // 3. Luật Cướp cờ (Ko): Cấm lặp lại y hệt hình cờ ngay lượt trước đó
-            if (isSameBoard(nextBoard, prevBoard)) {
-                return { ok: false, msg: 'Phạm luật Cướp cờ (Ko): Hãy đánh ở vị trí khác trước!' };
-            }
-
-            // Hợp lệ -> Cập nhật bàn cờ
-            prevBoard = cloneBoard(board);
-            board = nextBoard;
-            captures[color] += capturedCount;
-            lastMove = { col, row };
-            currentTurn = enemy;
-            passCount = 0;
-            return { ok: true };
-        }
-
-        // --- VẼ BÀN CỜ & QUÂN CỜ ---
         function drawBoard() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(boardImg, 0, 0, canvas.width, canvas.height);
+            const m = getMetrics();
 
-            const stepX = (canvas.width - MARGIN * 2) / (GRID_SIZE - 1);
-            const stepY = (canvas.height - MARGIN * 2) / (GRID_SIZE - 1);
-            const stoneSize = stepX * 0.92;
+            ctx.drawImage(boardImg, 0, m.cropY, m.iw, m.cropH, 0, 0, canvas.width, canvas.height);
+
+            const stoneSize = Math.min(m.stepX, m.stepY) * 0.92;
 
             for (let col = 0; col < GRID_SIZE; col++) {
                 for (let row = 0; row < GRID_SIZE; row++) {
                     const stone = board[col][row];
                     if (stone !== 0) {
-                        const cx = MARGIN + col * stepX;
-                        const cy = MARGIN + row * stepY;
+                        const cx = m.left + col * m.stepX;
+                        const cy = m.top + row * m.stepY;
                         ctx.drawImage(
                             stone === 1 ? blackImg : whiteImg,
                             cx - stoneSize / 2,
@@ -231,7 +223,6 @@
                             stoneSize
                         );
 
-                        // Vẽ vòng tròn đỏ nhỏ đánh dấu nước vừa đi
                         if (lastMove && lastMove.col === col && lastMove.row === row) {
                             ctx.beginPath();
                             ctx.arc(cx, cy, stoneSize * 0.16, 0, Math.PI * 2);
@@ -241,6 +232,66 @@
                     }
                 }
             }
+        }
+
+        const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+        const cloneBoard = (b) => b.map(r => [...r]);
+        const isSameBoard = (b1, b2) => b1 && b2 && JSON.stringify(b1) === JSON.stringify(b2);
+
+        function getGroupAndLiberties(targetBoard, startCol, startRow) {
+            const color = targetBoard[startCol][startRow];
+            const visited = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(false));
+            const group = [];
+            const liberties = new Set();
+            const queue = [[startCol, startRow]];
+            visited[startCol][startRow] = true;
+
+            while (queue.length > 0) {
+                const [c, r] = queue.shift();
+                group.push([c, r]);
+                for (const [dc, dr] of DIRS) {
+                    const nc = c + dc, nr = r + dr;
+                    if (nc >= 0 && nc < GRID_SIZE && nr >= 0 && nr < GRID_SIZE) {
+                        if (targetBoard[nc][nr] === 0) liberties.add(`${nc},${nr}`);
+                        else if (targetBoard[nc][nr] === color && !visited[nc][nr]) {
+                            visited[nc][nr] = true;
+                            queue.push([nc, nr]);
+                        }
+                    }
+                }
+            }
+            return { group, liberties: liberties.size };
+        }
+
+        function executeMove(col, row, color) {
+            if (board[col][row] !== 0) return { ok: false, msg: 'Giao điểm này đã có quân!' };
+            const nextBoard = cloneBoard(board);
+            nextBoard[col][row] = color;
+            const enemy = color === 1 ? 2 : 1;
+            let capturedCount = 0;
+
+            for (const [dc, dr] of DIRS) {
+                const nc = col + dc, nr = row + dr;
+                if (nc >= 0 && nc < GRID_SIZE && nr >= 0 && nr < GRID_SIZE && nextBoard[nc][nr] === enemy) {
+                    const { group, liberties } = getGroupAndLiberties(nextBoard, nc, nr);
+                    if (liberties === 0) {
+                        capturedCount += group.length;
+                        for (const [gc, gr] of group) nextBoard[gc][gr] = 0;
+                    }
+                }
+            }
+
+            const selfGroup = getGroupAndLiberties(nextBoard, col, row);
+            if (capturedCount === 0 && selfGroup.liberties === 0) return { ok: false, msg: 'Phạm luật: Nước đi tự sát!' };
+            if (isSameBoard(nextBoard, prevBoard)) return { ok: false, msg: 'Phạm luật Cướp cờ (Ko)!' };
+
+            prevBoard = cloneBoard(board);
+            board = nextBoard;
+            captures[color] += capturedCount;
+            lastMove = { col, row };
+            currentTurn = enemy;
+            passCount = 0;
+            return { ok: true };
         }
 
         function updateUI() {
@@ -253,19 +304,15 @@
             }
         }
 
-        // --- BẮT SỰ KIỆN CLICK ĐẶT QUÂN ---
         canvas.addEventListener('click', (e) => {
             if (isOnline && currentTurn !== myColor) return;
-
             const rect = canvas.getBoundingClientRect();
             const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
             const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+            const m = getMetrics();
 
-            const stepX = (canvas.width - MARGIN * 2) / (GRID_SIZE - 1);
-            const stepY = (canvas.height - MARGIN * 2) / (GRID_SIZE - 1);
-
-            const col = Math.round((clickX - MARGIN) / stepX);
-            const row = Math.round((clickY - MARGIN) / stepY);
+            const col = Math.round((clickX - m.left) / m.stepX);
+            const row = Math.round((clickY - m.top) / m.stepY);
 
             if (col >= 0 && col < GRID_SIZE && row >= 0 && row < GRID_SIZE) {
                 if (isOnline) {
@@ -279,7 +326,6 @@
             }
         });
 
-        // --- BỎ LƯỢT & ĐẦU HÀNG ---
         function handlePass() {
             if (isOnline) {
                 if (currentTurn === myColor) socket.emit('passTurn', { roomId, username });
@@ -287,11 +333,9 @@
                 passCount++;
                 if (passCount >= 2) {
                     const blackScore = captures[1];
-                    const whiteScore = captures[2] + 6.5; // Komi 6.5 điểm cho Trắng
-                    const winText = blackScore > whiteScore ? 'QUÂN ĐEN THẮNG!' : 'QUÂN TRẮNG THẮNG!';
-                    showEndScreen(winText, `Tù binh — Đen: ${blackScore} | Trắng: ${whiteScore} (đã cộng 6.5 Komi)`, true);
+                    const whiteScore = captures[2] + 6.5;
+                    showEndScreen(blackScore > whiteScore ? 'QUÂN ĐEN THẮNG!' : 'QUÂN TRẮNG THẮNG!', `Đen: ${blackScore} | Trắng: ${whiteScore}`, true);
                 } else {
-                    alert(`${currentTurn === 1 ? 'Đen' : 'Trắng'} đã bỏ lượt!`);
                     currentTurn = currentTurn === 1 ? 2 : 1;
                     updateUI();
                 }
@@ -299,13 +343,9 @@
         }
 
         function handleResign() {
-            if (!confirm('Bạn chắc chắn muốn đầu hàng ván này?')) return;
-            if (isOnline) {
-                socket.emit('resignGame', { roomId, username });
-            } else {
-                const winner = currentTurn === 1 ? 'QUÂN TRẮNG THẮNG!' : 'QUÂN ĐEN THẮNG!';
-                showEndScreen(winner, `${currentTurn === 1 ? 'Quân Đen' : 'Quân Trắng'} đã đầu hàng`, false);
-            }
+            if (!confirm('Bạn chắc chắn muốn đầu hàng?')) return;
+            if (isOnline) socket.emit('resignGame', { roomId, username });
+            else showEndScreen(currentTurn === 1 ? 'QUÂN TRẮNG THẮNG!' : 'QUÂN ĐEN THẮNG!', 'Đã đầu hàng', false);
         }
 
         function showEndScreen(titleText, reasonText, isWin) {
@@ -321,7 +361,6 @@
             window.location.href = '/index1.html';
         }
 
-        // --- ĐỒNG BỘ ONLINE KHI NỐI SERVER ---
         if (isOnline) {
             socket.on('syncBoard', (game) => {
                 board = game.board;
@@ -331,16 +370,10 @@
                 updateUI();
                 drawBoard();
             });
-
             socket.on('invalidMove', (msg) => alert(msg));
-
             socket.on('matchOver', ({ winner, reason, winnerNewScore }) => {
                 const isWin = winner === username;
-                showEndScreen(
-                    isWin ? 'CHIẾN THẮNG! (+1 ĐIỂM)' : 'THẤT BẠI!',
-                    reason,
-                    isWin
-                );
+                showEndScreen(isWin ? 'CHIẾN THẮNG! (+1 ĐIỂM)' : 'THẤT BẠI!', reason, isWin);
                 if (isWin) sessionStorage.setItem('go_score', winnerNewScore);
                 setTimeout(exitMatch, 3500);
             });
